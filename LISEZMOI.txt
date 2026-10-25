@@ -1,0 +1,7 @@
+MES JEUX MOBILES
+================
+Ouvre index.html dans ton navigateur : c'est le menu de tous les jeux.
+Chaque jeu est dans son propre dossier (nom-du-jeu/index.html) et fonctionne seul, hors ligne
+(sauf les polices Google, chargées par Internet).
+
+Copie récupérée le 25.10.2026 depuis les artefacts Claude.

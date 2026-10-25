@@ -1,0 +1,297 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Endless Drop</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Arcade cabinet: full-screen canvas well, one centered play column, glossy overlays on top. Single dark theme by choice. */
+:root{
+  --well:#3a0f6e; --well-deep:#22073f; --stone:#2b2d45; --stone-hi:#454866;
+  --spike:#ff2fae; --ring:#ffd23a; --ink:#ffffff; --muted:#cbb6ee;
+  --display:"Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --body:"Nunito", system-ui, -apple-system, sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;background:var(--well-deep);color:var(--ink);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;font-family:var(--body)}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hud{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:0;right:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;justify-content:center;pointer-events:none}
+.hud-in{width:100%;max-width:440px;display:flex;justify-content:space-between;align-items:flex-start}
+.meters{font-family:var(--display);font-size:44px;line-height:1;text-shadow:0 3px 0 rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
+.meters small{font-size:20px;color:var(--muted);margin-left:2px}
+.rings{display:flex;align-items:center;gap:6px;font-family:var(--display);font-size:24px;color:var(--ring);
+  background:rgba(0,0,0,.25);padding:6px 12px;border-radius:99px;font-variant-numeric:tabular-nums}
+.rings i{width:14px;height:14px;border:4px solid var(--ring);border-radius:50%;box-sizing:border-box}
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:rgba(20,4,40,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.card{width:100%;max-width:340px;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(48px,15vw,68px);line-height:.92;margin:0;
+  text-wrap:balance;text-shadow:0 5px 0 var(--spike),0 10px 24px rgba(0,0,0,.4);letter-spacing:.5px}
+.sub{color:var(--muted);font-weight:600;font-size:16px;margin:0;line-height:1.45;max-width:30ch}
+.tap{font-family:var(--display);font-size:22px;background:var(--ink);color:var(--well);border:0;border-radius:99px;
+  padding:14px 34px;box-shadow:0 5px 0 #b9a3e0;cursor:pointer;animation:pulse 1.4s ease-in-out infinite}
+.tap:focus-visible{outline:3px solid var(--ring);outline-offset:4px}
+.big{font-family:var(--display);font-size:76px;line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-size:28px;color:var(--muted)}
+.label{text-transform:uppercase;letter-spacing:2px;font-size:12px;font-weight:800;color:var(--muted)}
+.stats{display:flex;gap:28px;justify-content:center}
+.stats div{display:flex;flex-direction:column;gap:2px}
+.stats b{font-family:var(--display);font-weight:400;font-size:26px;font-variant-numeric:tabular-nums}
+.new{font-family:var(--display);color:var(--ring);font-size:20px}
+@keyframes pulse{50%{transform:scale(1.05)}}
+@media (prefers-reduced-motion:reduce){.tap{animation:none}}
+</style>
+
+<canvas id="c"></canvas>
+
+<div class="hud" id="hud" hidden>
+  <div class="hud-in">
+    <div class="meters"><span id="m">0</span><small>m</small></div>
+    <div class="rings"><i></i><span id="r">0</span></div>
+  </div>
+</div>
+
+<div class="screen" id="start">
+  <div class="card">
+    <h1>Endless<br>Drop</h1>
+    <p class="sub">Touche l'écran pour sauter d'une paroi à l'autre. Évite les pics, attrape les anneaux (+5 m).</p>
+    <button class="tap" id="go">Jouer</button>
+    <div class="label" id="bestStart"></div>
+  </div>
+</div>
+
+<div class="screen" id="over" hidden>
+  <div class="card">
+    <div class="label">Profondeur atteinte</div>
+    <div class="big"><span id="fm">0</span><small> m</small></div>
+    <div class="new" id="newBest" hidden>Nouveau record !</div>
+    <div class="stats">
+      <div><span class="label">Record</span><b id="fb">0 m</b></div>
+      <div><span class="label">Anneaux</span><b id="fr">0</b></div>
+    </div>
+    <button class="tap" id="again">Rejouer</button>
+  </div>
+</div>
+
+<script>
+const cvs=document.getElementById('c'), ctx=cvs.getContext('2d');
+const $=id=>document.getElementById(id);
+const C={well:'#3a0f6e',deep:'#22073f',stone:'#2b2d45',hi:'#454866',lo:'#1b1c2e',spike:'#ff2fae',spikeHi:'#ff7fd0',ring:'#ffd23a'};
+let W,H,FW,ox,wall,R,sh;
+function resize(){
+  const d=Math.min(devicePixelRatio||1,2);
+  W=innerWidth;H=innerHeight;cvs.width=W*d;cvs.height=H*d;ctx.setTransform(d,0,0,d,0,0);
+  FW=Math.min(W,440);ox=(W-FW)/2;wall=Math.round(Math.min(FW*0.12,54));
+  R=Math.round(Math.max(12,Math.min(FW*0.045,19)));sh=wall*0.78;
+}
+addEventListener('resize',resize);resize();
+
+let best=0;try{best=+localStorage.getItem('ed-best')||0}catch(e){}
+const PX_PER_M=40, BALLY=()=>H*0.3;
+let state='menu',depth,speed,t,side,tx,haz,rings,saws,nextY,ringCount,bonus,parts,popups,shake,deadT,trail;
+
+function reset(){
+  depth=0;speed=320;t=0;side=0;tx=0;haz=[];rings=[];saws=[];nextY=H*1.1;ringCount=0;bonus=0;
+  parts=[];popups=[];shake=0;deadT=0;trail=[];
+}
+reset();
+
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function gen(){
+  while(nextY<depth+H*2.2){
+    const v=Math.max(speed,320);
+    const s=Math.random()<.5?0:1, len=1+Math.floor(Math.random()*Math.min(4,1+t/15));
+    const kind=Math.random()<.3?'block':'spike';
+    haz.push({y:nextY,side:s,len,kind});
+    const end=nextY+len*wall;
+    // gap long enough to react and cross the well
+    const gap=2*R+v*0.42+60+rnd(0,120);
+    // ring on the safe side, inside or just after the hazard
+    if(Math.random()<.55) rings.push({y:nextY+len*wall/2,side:1-s,got:false,ph:Math.random()*6});
+    else if(Math.random()<.3) rings.push({y:end+gap*0.5,side:2,got:false,ph:Math.random()*6});
+    // a saw in the middle of some long gaps, after the speed has picked up
+    if(t>12 && gap>260 && Math.random()<.35) saws.push({y:end+gap/2,ph:0});
+    nextY=end+gap;
+  }
+  const cut=depth-H;haz=haz.filter(h=>h.y+h.len*wall>cut);rings=rings.filter(r=>r.y>cut);saws=saws.filter(s=>s.y>cut);
+}
+
+/* audio, started on first tap */
+let ac;
+function beep(f,d,type='sine',vol=.12,slide=0){
+  if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;
+  if(slide)o.frequency.exponentialRampToValueAtTime(slide,ac.currentTime+d);
+  g.gain.setValueAtTime(vol,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);
+  o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+d);
+}
+
+function start(){
+  if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+  reset();state='play';$('start').hidden=true;$('over').hidden=true;$('hud').hidden=false;
+}
+function flip(){side=1-side;beep(side?660:520,.08,'triangle',.08)}
+function die(){
+  state='dead';deadT=0;shake=14;beep(180,.5,'sawtooth',.15,50);
+  try{navigator.vibrate&&navigator.vibrate(80)}catch(e){}
+  const b=ballPos();
+  for(let i=0;i<34;i++){const a=Math.random()*6.28,s=rnd(80,420);parts.push({x:b.x,y:b.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:1,c:Math.random()<.5?'#fff':C.spike})}
+}
+function finish(){
+  state='over';const m=score();let nb=false;
+  if(m>best){best=m;nb=true;try{localStorage.setItem('ed-best',best)}catch(e){}}
+  $('fm').textContent=m;$('fb').textContent=best+' m';$('fr').textContent=ringCount;$('newBest').hidden=!nb;
+  $('hud').hidden=true;$('over').hidden=false;
+}
+const score=()=>Math.floor(depth/PX_PER_M)+bonus;
+
+function onTap(e){
+  if(e&&e.target&&e.target.closest&&e.target.closest('button')&&state!=='play')return;
+  if(state==='play')flip();
+}
+cvs.addEventListener('pointerdown',e=>{e.preventDefault();onTap(e)});
+$('hud').addEventListener('pointerdown',onTap);
+$('go').addEventListener('click',start);
+$('again').addEventListener('click',start);
+addEventListener('keydown',e=>{
+  if(e.code!=='Space'&&e.code!=='ArrowLeft'&&e.code!=='ArrowRight'&&e.code!=='Enter')return;
+  e.preventDefault();
+  if(state==='play')flip();else if(state==='menu'||state==='over')start();
+});
+if(best)$('bestStart').textContent='Record : '+best+' m';
+
+function ballPos(){
+  const lx=ox+wall+R+1, rx=ox+FW-wall-R-1;
+  const e=tx<.5?2*tx*tx:1-Math.pow(-2*tx+2,2)/2;
+  return {x:lx+(rx-lx)*e,y:BALLY()};
+}
+
+function update(dt){
+  if(state==='play'){
+    t+=dt;speed=320+620*(1-Math.exp(-t/70));depth+=speed*dt;
+    tx+=(side?1:-1)*dt/0.13;tx=Math.max(0,Math.min(1,tx));
+    gen();
+    const b=ballPos(), wy=depth+b.y;
+    trail.push({x:b.x,y:wy});if(trail.length>10)trail.shift();
+    for(const h of haz){
+      if(wy+R*.75<h.y||wy-R*.75>h.y+h.len*wall)continue;
+      const reach=h.kind==='block'?wall+sh*.55:sh*.85;
+      if(h.side===0? b.x-R<ox+wall+reach : b.x+R>ox+FW-wall-reach){die();break}
+    }
+    if(state==='play')for(const s of saws){
+      const sr=sawR();if(Math.hypot(b.x-W/2,wy-s.y)<sr+R*.8){die();break}
+    }
+    for(const r of rings){
+      if(r.got)continue;const p=ringXY(r);
+      if(Math.hypot(b.x-p.x,wy-p.y)<R+ringR()+2){
+        r.got=true;ringCount++;bonus+=5;beep(1040,.12,'square',.05);setTimeout(()=>beep(1560,.12,'square',.04),60);
+        popups.push({x:p.x,y:p.y,l:1});
+      }
+    }
+    $('m').textContent=score();$('r').textContent=ringCount;
+  } else if(state==='dead'){deadT+=dt;depth+=speed*dt*Math.max(0,1-deadT*3);if(deadT>.8)finish()}
+  else if(state==='menu'){depth+=90*dt;t=0;gen()}
+  for(const s of saws)s.ph+=dt*6;
+  for(const p of parts){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=600*dt;p.l-=dt*1.4}
+  parts=parts.filter(p=>p.l>0);
+  for(const p of popups){p.y-=0;p.l-=dt*1.6}popups=popups.filter(p=>p.l>0);
+  shake*=Math.pow(.02,dt);
+}
+const sawR=()=>Math.max(14,(FW/2-wall-2*R-18)*0.72);
+const ringR=()=>R*0.68;
+function ringXY(r){
+  const x=r.side===2?W/2:r.side===0?ox+wall+R+1:ox+FW-wall-R-1;
+  return {x,y:r.y};
+}
+
+/* ---- drawing ---- */
+function hash(a,b){let h=a*374761393+b*668265263;h=(h^(h>>13))*1274126177;return ((h^(h>>16))>>>0)/4294967295}
+function drawBg(){
+  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#4a1588');g.addColorStop(1,C.well);
+  ctx.fillStyle=C.deep;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=g;ctx.fillRect(ox,0,FW,H);
+  const sz=34,par=depth*.45,row0=Math.floor(par/sz);
+  for(let r=row0;r<row0+H/sz+2;r++)for(let c=0;c<FW/sz+1;c++){
+    const v=hash(r,c);if(v>.82){ctx.fillStyle=`rgba(255,255,255,${(v-.82)*.35})`;
+      const s=sz*(.4+(v-.82)*2.5);ctx.fillRect(ox+c*sz+(sz-s)/2,r*sz-par+(sz-s)/2,s,s)}
+  }
+}
+function tile(x,y,s){
+  ctx.fillStyle=C.stone;ctx.fillRect(x,y,s,s);
+  ctx.fillStyle=C.hi;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+s,y);ctx.lineTo(x,y+s);ctx.fill();
+  ctx.fillStyle=C.lo;ctx.fillRect(x,y+s-3,s,3);ctx.fillRect(x+s-3,y,3,s);
+}
+function drawWalls(){
+  const off=depth%wall;
+  for(let y=-off;y<H;y+=wall){tile(ox,y,wall);tile(ox+FW-wall,y,wall)}
+}
+function spikes(x0,dir,y,len){
+  // triangles standing on a wall edge, pointing into the well
+  const n=len;for(let i=0;i<n;i++){
+    const yy=y+i*wall;ctx.fillStyle=C.spike;ctx.beginPath();
+    ctx.moveTo(x0,yy+2);ctx.lineTo(x0+dir*sh,yy+wall/2);ctx.lineTo(x0,yy+wall-2);ctx.fill();
+    ctx.fillStyle=C.spikeHi;ctx.beginPath();ctx.moveTo(x0,yy+2);ctx.lineTo(x0+dir*sh,yy+wall/2);ctx.lineTo(x0,yy+wall/2);ctx.fill();
+  }
+}
+function drawHaz(){
+  for(const h of haz){
+    const y=h.y-depth;if(y>H||y+h.len*wall<0)continue;
+    const L=h.side===0;
+    if(h.kind==='block'){
+      const bw=wall*.55,bx=L?ox+wall:ox+FW-wall-bw;
+      for(let i=0;i<h.len;i++)tile(bx,y+i*wall,bw);
+      spikes(L?ox+wall+bw:ox+FW-wall-bw,L?1:-1,y,h.len);
+    } else spikes(L?ox+wall:ox+FW-wall,L?1:-1,y,h.len);
+  }
+}
+function drawSaws(){
+  const sr=sawR();
+  for(const s of saws){
+    const y=s.y-depth;if(y<-sr||y>H+sr)continue;
+    ctx.save();ctx.translate(W/2,y);ctx.rotate(s.ph);
+    ctx.fillStyle=C.spike;ctx.beginPath();const n=10;
+    for(let i=0;i<n*2;i++){const a=i/(n*2)*6.283,rr=i%2?sr*.72:sr;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr)}
+    ctx.fill();ctx.fillStyle=C.stone;ctx.beginPath();ctx.arc(0,0,sr*.42,0,6.283);ctx.fill();
+    ctx.fillStyle=C.hi;ctx.beginPath();ctx.arc(0,0,sr*.16,0,6.283);ctx.fill();ctx.restore();
+  }
+}
+function drawRings(now){
+  const rr=ringR();ctx.lineWidth=Math.max(3,R*.28);ctx.strokeStyle=C.ring;
+  for(const r of rings){if(r.got)continue;const p=ringXY(r),y=p.y-depth;if(y<-20||y>H+20)continue;
+    const sx=Math.abs(Math.cos(now*3+r.ph))*.7+.3;
+    ctx.beginPath();ctx.ellipse(p.x,y,rr*sx,rr*1.25,0,0,6.283);ctx.stroke()}
+}
+function drawBall(){
+  if(state==='dead'||state==='over')return;
+  const b=ballPos();
+  for(let i=0;i<trail.length;i++){const p=trail[i],a=i/trail.length;
+    ctx.fillStyle=`rgba(255,255,255,${a*.18})`;ctx.beginPath();ctx.arc(p.x,p.y-depth,R*a,0,6.283);ctx.fill()}
+  const moving=tx>0&&tx<1, sq=moving?1.18:1;
+  ctx.save();ctx.translate(b.x,b.y);ctx.scale(sq,1/sq);
+  ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.arc(2,4,R,0,6.283);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,R,0,6.283);ctx.fill();
+  const look=(side?1:-1)*R*.18;
+  ctx.fillStyle='#1d1438';
+  ctx.beginPath();ctx.ellipse(-R*.3+look,-R*.12,R*.13,R*.2,0,0,6.283);ctx.ellipse(R*.3+look,-R*.12,R*.13,R*.2,0,0,6.283);ctx.fill();
+  ctx.restore();
+}
+function drawFx(){
+  for(const p of parts){ctx.globalAlpha=Math.max(0,p.l);ctx.fillStyle=p.c;ctx.fillRect(p.x-3,p.y-3,6,6)}
+  ctx.globalAlpha=1;
+  ctx.font=`22px "Lilita One", system-ui`;ctx.textAlign='center';
+  for(const p of popups){ctx.globalAlpha=p.l;ctx.fillStyle=C.ring;ctx.fillText('+5 m',p.x+(p.x<W/2?36:-36),p.y-depth-(1-p.l)*40)}
+  ctx.globalAlpha=1;
+}
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.033,(now-last)/1000);last=now;update(dt);
+  ctx.save();if(shake>.3)ctx.translate(rnd(-shake,shake),rnd(-shake,shake));
+  drawBg();drawWalls();drawRings(now/1000);drawSaws();drawHaz();drawBall();drawFx();ctx.restore();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(t0=>{last=t0;requestAnimationFrame(frame)});
+</script>
+
+</body></html>

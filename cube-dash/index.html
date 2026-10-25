@@ -1,0 +1,322 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Cube Dash</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap">
+<style>
+/* Layout: one-screen game — slim HUD bar, canvas fills the rest, overlay for start/win */
+:root {
+  --sky-top: #0e3a5c;
+  --sky-bottom: #1d7a9c;
+  --ink: #eaf6ff;
+  --muted: #a9cde3;
+  --cube: #ffc93c;
+  --bar: rgba(255,255,255,.18);
+  --display: "Russo One", "Arial Black", Impact, sans-serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--sky-top);
+  color: var(--ink);
+  font-family: var(--body);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.app { height: 100%; display: flex; flex-direction: column; }
+.hud {
+  display: flex; align-items: center; gap: 12px;
+  padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.hud h1 { font-family: var(--display); font-size: 18px; font-weight: 400; margin: 0; letter-spacing: .02em; color: var(--cube); }
+.progress { flex: 1; min-width: 0; height: 10px; border-radius: 5px; background: var(--bar); overflow: hidden; }
+.progress span { display: block; height: 100%; width: 0; background: var(--ink); }
+.stats { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; display: flex; gap: 10px; }
+.stats b { color: var(--ink); font-weight: 600; }
+.stage { position: relative; flex: 1; min-height: 0; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
+.overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px; text-align: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  pointer-events: none;
+}
+.overlay h2 { font-family: var(--display); font-weight: 400; font-size: clamp(28px, 7vw, 48px); margin: 0; text-shadow: 0 3px 0 rgba(0,0,0,.25); text-wrap: balance; }
+.overlay p { margin: 0; color: var(--ink); font-size: 15px; opacity: .9; }
+.overlay .key { display: inline-block; padding: 1px 7px; border: 1px solid var(--muted); border-radius: 4px; font-size: 12px; color: var(--muted); }
+@media (max-width: 420px) { .hud h1 { display: none; } }
+</style>
+
+<div class="app">
+  <div class="hud">
+    <h1>Cube Dash</h1>
+    <div class="progress" aria-label="Progression"><span id="bar"></span></div>
+    <div class="stats">
+      <span id="pct"><b>0%</b></span>
+      <span>Essai <b id="att">1</b></span>
+      <span>Record <b id="best">0%</b></span>
+    </div>
+  </div>
+  <div class="stage">
+    <canvas id="c"></canvas>
+    <div class="overlay" id="ov">
+      <h2 id="ovTitle">Cube Dash</h2>
+      <p id="ovText">Touchez l'écran pour sauter · maintenez pour enchaîner</p>
+      <p><span class="key">Espace</span> ou <span class="key">↑</span> au clavier</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ----- Niveau : 1 caractère = 1 colonne -----
+  // .  vide   ^ pic au sol   1-3 bloc de hauteur n   A-C bloc de hauteur n avec pic dessus
+  const LEVEL = [
+    "..........................",
+    "^.........^.........^^.........",
+    "1111.......^^.......1111.......",
+    "^^^...........",
+    "..22222.....22222.......",
+    "...A.........A^.........",
+    "..1122...........^^^.........",
+    "1^1^1^1^1.........",
+    "^^...^^...^^^..........",
+    "..11....22....A....",
+    ".^...^^...^^^........",
+    "11122211.........A^.........",
+    "^.^.^.^.........",
+    "..1111^^^1111.........",
+    "...^^^......^^^......^^^.........",
+    "..........................."
+  ].join("");
+
+  const N = LEVEL.length;
+  const colH = new Int8Array(N + 40);
+  const colSpike = new Int8Array(N + 40).fill(-1);
+  for (let i = 0; i < N; i++) {
+    const ch = LEVEL[i];
+    if (ch === "^") colSpike[i] = 0;
+    else if (ch >= "1" && ch <= "4") colH[i] = +ch;
+    else if (ch >= "A" && ch <= "C") { const h = ch.charCodeAt(0) - 64; colH[i] = h; colSpike[i] = h; }
+  }
+  const END = N - 4;
+
+  // ----- Physique (unités = cases) -----
+  const SPEED = 10.4, G = 80, JV = 18.4, S = 0.9, ROT = Math.PI / 0.46;
+  const START_X = 2;
+
+  const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+  const bar = document.getElementById("bar"), pctEl = document.getElementById("pct");
+  const attEl = document.getElementById("att"), bestEl = document.getElementById("best");
+  const ov = document.getElementById("ov"), ovTitle = document.getElementById("ovTitle"), ovText = document.getElementById("ovText");
+
+  let best = 0;
+  try { best = +localStorage.getItem("cubedash-best") || 0; } catch (e) {}
+  bestEl.textContent = best + "%";
+
+  let W = 0, H = 0, DPR = 1, T = 40;
+  function resize() {
+    const r = cv.getBoundingClientRect();
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    T = Math.max(22, Math.min(H / 8, W / 15));
+  }
+  new ResizeObserver(resize).observe(cv);
+  resize();
+
+  let state = "ready", attempts = 1, holding = false, deadTimer = 0;
+  const p = { x: START_X, y: 0, vy: 0, ground: true, rot: 0 };
+  let particles = [];
+
+  function reset() {
+    p.x = START_X; p.y = 0; p.vy = 0; p.ground = true; p.rot = 0;
+    particles = [];
+  }
+
+  function percent() { return Math.max(0, Math.min(100, Math.floor((p.x - START_X) / (END - START_X) * 100))); }
+
+  function die() {
+    state = "dead"; deadTimer = 0.9;
+    const cx = p.x + S / 2, cy = p.y + S / 2;
+    for (let i = 0; i < 26; i++) {
+      const a = Math.random() * Math.PI * 2, s = 3 + Math.random() * 9;
+      particles.push({ x: cx, y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.7 + Math.random() * 0.4, size: 0.12 + Math.random() * 0.18 });
+    }
+    const pc = percent();
+    if (pc > best) { best = pc; bestEl.textContent = best + "%"; try { localStorage.setItem("cubedash-best", best); } catch (e) {} }
+  }
+
+  function win() {
+    state = "win";
+    best = 100; bestEl.textContent = "100%";
+    try { localStorage.setItem("cubedash-best", 100); } catch (e) {}
+    ovTitle.textContent = "Niveau terminé !";
+    ovText.textContent = "En " + attempts + (attempts > 1 ? " essais" : " essai") + ". Touchez pour rejouer.";
+    ov.hidden = false;
+  }
+
+  function step(dt) {
+    p.x += SPEED * dt;
+    if (p.ground && holding) { p.vy = JV; p.ground = false; }
+    p.vy -= G * dt;
+    const prevY = p.y;
+    p.y += p.vy * dt;
+    p.ground = false;
+    if (p.y <= 0) { p.y = 0; p.vy = 0; p.ground = true; }
+
+    const c0 = Math.floor(p.x), c1 = Math.floor(p.x + S - 0.001);
+    for (let c = c0; c <= c1; c++) {
+      const h = colH[c];
+      if (h > 0 && p.y < h) {
+        if (prevY >= h - 0.25 && p.vy <= 0) { p.y = h; p.vy = 0; p.ground = true; }
+        else { die(); return; }
+      }
+    }
+    // pics : petite zone de contact, un peu indulgente
+    const px0 = p.x + 0.08, px1 = p.x + S - 0.08, py0 = p.y + 0.06, py1 = p.y + S - 0.06;
+    for (let c = c0 - 1; c <= c1 + 1; c++) {
+      const b = colSpike[c];
+      if (b >= 0) {
+        if (px1 > c + 0.3 && px0 < c + 0.7 && py1 > b && py0 < b + 0.55) { die(); return; }
+      }
+    }
+
+    if (p.ground) {
+      const q = Math.round(p.rot / (Math.PI / 2)) * (Math.PI / 2);
+      p.rot += (q - p.rot) * Math.min(1, dt * 30);
+    } else p.rot += ROT * dt;
+
+    if (p.x >= END) win();
+  }
+
+  // ----- Rendu -----
+  function draw() {
+    const groundY = H * 0.78;
+    const camX = p.x - (W * 0.26) / T;
+    const sx = x => (x - camX) * T, sy = y => groundY - y * T;
+
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#0e3a5c"); g.addColorStop(1, "#1d7a9c");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    // décor : grands carrés en parallaxe
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    const big = T * 3, off = (camX * T * 0.3) % (big * 2);
+    for (let x = -off - big * 2; x < W + big; x += big * 2) {
+      ctx.fillRect(x, groundY - big * 2.2, big, big);
+      ctx.fillRect(x + big, groundY - big * 3.4, big * 0.6, big * 0.6);
+    }
+
+    // sol
+    ctx.fillStyle = "#0a2740"; ctx.fillRect(0, groundY, W, H - groundY);
+    ctx.fillStyle = "#7fd3ff"; ctx.fillRect(0, groundY, W, 2);
+    ctx.strokeStyle = "rgba(127,211,255,0.15)"; ctx.lineWidth = 1;
+    const go = (camX * T) % T;
+    for (let x = -go; x < W; x += T) { ctx.beginPath(); ctx.moveTo(x, groundY); ctx.lineTo(x, H); ctx.stroke(); }
+
+    const cStart = Math.max(0, Math.floor(camX) - 1), cEnd = Math.min(N + 2, Math.ceil(camX + W / T) + 1);
+    for (let c = cStart; c <= cEnd; c++) {
+      const h = colH[c];
+      for (let k = 0; k < h; k++) {
+        const x = sx(c), y = sy(k + 1);
+        ctx.fillStyle = "#08223a"; ctx.fillRect(x, y, T, T);
+        ctx.strokeStyle = "#cfefff"; ctx.lineWidth = 2;
+        ctx.strokeRect(x + 1, y + 1, T - 2, T - 2);
+        ctx.strokeStyle = "rgba(207,239,255,0.25)";
+        ctx.strokeRect(x + T * 0.25, y + T * 0.25, T * 0.5, T * 0.5);
+      }
+      const b = colSpike[c];
+      if (b >= 0) {
+        const x = sx(c), y = sy(b);
+        ctx.beginPath();
+        ctx.moveTo(x + 2, y); ctx.lineTo(x + T / 2, y - T * 0.92); ctx.lineTo(x + T - 2, y); ctx.closePath();
+        ctx.fillStyle = "#061a2c"; ctx.fill();
+        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke();
+      }
+    }
+
+    // ligne d'arrivée
+    const fx = sx(END);
+    if (fx < W + T) {
+      const sq = T / 2;
+      for (let i = 0; i * sq < groundY; i++) for (let j = 0; j < 2; j++) {
+        ctx.fillStyle = (i + j) % 2 ? "#ffffff" : "#0a2740";
+        ctx.fillRect(fx + j * sq, groundY - (i + 1) * sq, sq, sq);
+      }
+    }
+
+    // joueur
+    if (state !== "dead") {
+      const cx = sx(p.x + S / 2), cy = sy(p.y + S / 2), s = S * T;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(p.rot);
+      ctx.fillStyle = "#ffc93c"; ctx.fillRect(-s / 2, -s / 2, s, s);
+      ctx.strokeStyle = "#5a3a00"; ctx.lineWidth = 2.5; ctx.strokeRect(-s / 2 + 1, -s / 2 + 1, s - 2, s - 2);
+      ctx.fillStyle = "#31c4ff"; ctx.fillRect(-s * 0.22, -s * 0.22, s * 0.44, s * 0.44);
+      ctx.strokeRect(-s * 0.22, -s * 0.22, s * 0.44, s * 0.44);
+      ctx.restore();
+    }
+
+    for (const q of particles) {
+      ctx.globalAlpha = Math.max(0, q.life);
+      ctx.fillStyle = "#ffc93c";
+      const s = q.size * T;
+      ctx.fillRect(sx(q.x) - s / 2, sy(q.y) - s / 2, s, s);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function updateHud() {
+    const pc = percent();
+    bar.style.width = pc + "%";
+    pctEl.innerHTML = "<b>" + pc + "%</b>";
+    attEl.textContent = attempts;
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    let dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (state === "play") {
+      const sub = 8, h = dt / sub;
+      for (let i = 0; i < sub && state === "play"; i++) step(h);
+    } else if (state === "dead") {
+      deadTimer -= dt;
+      if (deadTimer <= 0) { attempts++; reset(); state = "play"; }
+    }
+    for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy -= 20 * dt; q.life -= dt * 1.4; }
+    particles = particles.filter(q => q.life > 0);
+    draw(); updateHud();
+    requestAnimationFrame(frame);
+  }
+
+  function press() {
+    holding = true;
+    if (state === "ready") { state = "play"; ov.hidden = true; }
+    else if (state === "win") { attempts = 1; reset(); state = "play"; ov.hidden = true; }
+  }
+  function release() { holding = false; }
+
+  cv.addEventListener("pointerdown", e => { e.preventDefault(); press(); });
+  window.addEventListener("pointerup", release);
+  window.addEventListener("pointercancel", release);
+  window.addEventListener("keydown", e => {
+    if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") { e.preventDefault(); if (!e.repeat) press(); }
+  });
+  window.addEventListener("keyup", e => {
+    if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") release();
+  });
+  window.addEventListener("blur", release);
+
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>

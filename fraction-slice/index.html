@@ -1,0 +1,182 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Fraction Slice</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Monoton&family=Lexend:wght@400;600;800&display=swap">
+<style>
+/* Layout: one-screen arcade — HUD, a big stacked fraction as the order, then a glowing bar to slice with one tap */
+:root{
+  --bg:#07060f; --panel:#110e20; --ink:#eef0ff; --dim:#8a87a6;
+  --beam:#2ef2ff; --target:#ffe14d; --hot:#ff3fb4; --ok:#5dff9a; --bad:#ff4d5e;
+  --display:"Monoton","Lexend",system-ui,sans-serif;
+  --body:"Lexend",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.app{height:100%;box-sizing:border-box;max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:12px;position:relative;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
+.hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;font-variant-numeric:tabular-nums}
+.score{font-size:28px;font-weight:800}
+.score small,.lvl{display:block;font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+.mult{font-weight:800;font-size:20px;color:var(--target);text-shadow:0 0 12px var(--target);min-width:52px;text-align:center;transition:transform .15s}
+.mult.pop{transform:scale(1.5)}
+.lives{display:flex;gap:8px;justify-content:flex-end}
+.life{width:14px;height:14px;border-radius:50%;background:var(--hot);box-shadow:0 0 10px var(--hot);transition:opacity .3s,transform .3s}
+.life.off{opacity:.15;box-shadow:none;transform:scale(.7)}
+
+.order{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:0}
+.frac{display:inline-flex;flex-direction:column;align-items:center;font-weight:800;font-size:clamp(54px,17vw,92px);line-height:1;
+  color:var(--target);text-shadow:0 0 10px var(--target),0 0 30px rgba(255,225,77,.35);font-variant-numeric:tabular-nums}
+.frac hr{width:120%;border:0;height:6px;border-radius:3px;background:var(--target);box-shadow:0 0 12px var(--target);margin:8px 0}
+.ask{color:var(--dim);font-size:15px;margin:0}
+.result{min-height:52px;text-align:center;font-weight:800;font-size:24px;letter-spacing:.04em}
+.result small{display:block;font-size:13px;font-weight:600;color:var(--dim);letter-spacing:0;margin-top:2px}
+
+.zone{position:relative;height:150px;touch-action:none;cursor:crosshair;flex:none}
+.track{position:absolute;top:40px;height:70px;border-radius:12px;border:2px solid var(--beam);background:rgba(46,242,255,.05);
+  box-shadow:0 0 16px rgba(46,242,255,.45),inset 0 0 14px rgba(46,242,255,.12);transition:left .35s,width .35s}
+.fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:10px 0 0 10px;background:linear-gradient(90deg,rgba(46,242,255,.25),rgba(46,242,255,.55))}
+.fill.anim{transition:width .25s ease-out}
+.tick{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;background:rgba(46,242,255,.5)}
+.guide,.cut,.goal{position:absolute;top:-22px;bottom:-22px;width:4px;margin-left:-2px;border-radius:2px;pointer-events:none}
+.guide{background:var(--ink);box-shadow:0 0 12px var(--ink);opacity:.7}
+.cut{background:var(--hot);box-shadow:0 0 16px var(--hot)}
+.goal{background:var(--target);box-shadow:0 0 16px var(--target)}
+.goal::after{content:"cible";position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;color:var(--target);letter-spacing:.08em}
+.cut::after{content:"toi";position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;color:var(--hot);letter-spacing:.08em}
+.end{position:absolute;top:116px;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+.tip{text-align:center;color:var(--dim);font-size:13px;margin:0;min-height:1.3em}
+
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;z-index:5;
+  background:rgba(7,6,15,.93);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.logo{font-family:var(--display);font-weight:400;font-size:clamp(40px,12.5vw,70px);line-height:1.05;margin:0;
+  text-shadow:0 0 6px var(--beam),0 0 18px var(--beam),0 0 40px var(--hot)}
+.rules{max-width:36ch;line-height:1.55;color:var(--dim);margin:0}
+.go{font:inherit;font-weight:800;font-size:20px;padding:14px 44px;border-radius:999px;border:2px solid var(--ok);color:var(--ok);background:transparent;box-shadow:0 0 18px var(--ok);cursor:pointer;letter-spacing:.08em}
+.go:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.big{font-size:56px;font-weight:800;margin:0;line-height:1;font-variant-numeric:tabular-nums}
+.best{color:var(--target);font-weight:600;margin:0}
+@media (prefers-reduced-motion:reduce){.track,.fill.anim{transition:none}}
+</style>
+
+<div class="app">
+  <div class="hud">
+    <div class="score"><small>Score</small><span id="score">0</span></div>
+    <div class="mult" id="mult">×1</div>
+    <div><div class="lives" id="lives"><span class="life"></span><span class="life"></span><span class="life"></span></div><span class="lvl" id="lvl" style="text-align:right;margin-top:6px">Niveau 1</span></div>
+  </div>
+
+  <div class="order">
+    <p class="ask">Coupe la barre à</p>
+    <div class="frac"><span id="num">3</span><hr><span id="den">4</span></div>
+    <div class="result" id="result"></div>
+  </div>
+
+  <div class="zone" id="zone">
+    <div class="track" id="track"><div class="fill" id="fill"></div></div>
+  </div>
+  <p class="tip" id="tip">Touche la barre là où tu veux couper</p>
+
+  <div class="overlay" id="overlay">
+    <h1 class="logo">Fraction<br>Slice</h1>
+    <p class="rules">Une fraction s'affiche. Coupe la barre au bon endroit, d'un seul geste. Plus tu es précis, plus tu marques. Les graduations disparaissent au fil des niveaux.</p>
+    <p class="best" id="bestStart"></p>
+    <button class="go" id="go">Jouer</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const zone=$("zone"), track=$("track"), fill=$("fill");
+let score, lives, streak, mult, round, n, d, locked=true, running=false, guide=null, timer, ac, aiming=false;
+let best=0; try{ best=+localStorage.getItem("fracSliceBest")||0; }catch(e){}
+$("bestStart").textContent = best ? "Record : "+best : "";
+
+function tone(f,dur,type="triangle",v=.07){ if(!ac) return; const o=ac.createOscillator(), g=ac.createGain(); o.type=type; o.frequency.value=f;
+  g.gain.setValueAtTime(v,ac.currentTime); g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur); o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime+dur); }
+
+function level(){ return round<6?1 : round<12?2 : round<18?3 : round<26?4 : 5; }
+const DENS = {1:[2,4], 2:[2,3,4,5], 3:[3,4,5,6,8], 4:[5,6,8,10], 5:[3,5,6,7,8,9,10,12]};
+const LVL_TXT = {1:"graduations", 2:"graduations", 3:"repère ½ seul", 4:"sans repère", 5:"sans repère"};
+
+function hud(){
+  $("score").textContent=score; $("mult").textContent="×"+mult;
+  $("lvl").textContent="Niveau "+level();
+  [...$("lives").children].forEach((l,i)=>l.classList.toggle("off", i>=lives));
+}
+function clearMarks(){ track.querySelectorAll(".tick,.guide,.cut,.goal").forEach(e=>e.remove()); zone.querySelectorAll(".end").forEach(e=>e.remove()); guide=null; }
+function mark(cls,p){ const m=document.createElement("div"); m.className=cls; m.style.left=(p*100)+"%"; track.appendChild(m); return m; }
+
+function next(){
+  if(!running) return;
+  clearTimeout(timer); clearMarks();
+  const L = level(), pool = DENS[L];
+  let nd, nn; do { nd = pool[Math.floor(Math.random()*pool.length)]; nn = 1+Math.floor(Math.random()*(nd-1)); } while (nd===d && nn===n);
+  d=nd; n=nn; $("num").textContent=n; $("den").textContent=d;
+  // Bar geometry: full width early, then a random width and position so screen memory doesn't help
+  let w=100, x=0;
+  if (L>=3){ w = 55 + Math.random()*45; x = Math.random()*(100-w); }
+  track.style.width=w+"%"; track.style.left=x+"%";
+  // Ticks
+  if (L<=2) for(let i=1;i<d;i++) mark("tick", i/d);
+  else if (L===3) mark("tick", .5);
+  fill.classList.remove("anim"); fill.style.width="0";
+  for (const [t,v] of [["0",0],["1",1]]) { const e=document.createElement("span"); e.className="end"; e.textContent=t;
+    e.style.left = `calc(${x + v*w}% - ${v?6:2}px)`; zone.appendChild(e); }
+  $("result").innerHTML=""; $("tip").textContent = round===0 ? "Touche la barre là où tu veux couper" : LVL_TXT[L];
+  locked=false;
+}
+function posOf(e){ const r=track.getBoundingClientRect(); return Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)); }
+
+zone.addEventListener("pointerdown", e => {
+  if (!running) return;
+  if (locked){ if(lives>0){ clearTimeout(timer); next(); } return; }   // tap to skip the reveal
+  aiming=true; zone.setPointerCapture(e.pointerId);
+  guide = guide || mark("guide", posOf(e)); guide.style.left = posOf(e)*100+"%";
+});
+zone.addEventListener("pointermove", e => { if(aiming && guide) guide.style.left = posOf(e)*100+"%"; });
+zone.addEventListener("pointerup", e => { if(!aiming) return; aiming=false; slice(posOf(e)); });
+zone.addEventListener("pointercancel", () => { aiming=false; if(guide){ guide.remove(); guide=null; } });
+
+function slice(p){
+  if (locked) return; locked=true;
+  if (guide){ guide.remove(); guide=null; }
+  const goal = n/d, err = Math.abs(p-goal), pct = Math.round(err*1000)/10;
+  fill.classList.add("anim"); fill.style.width=(p*100)+"%";
+  mark("cut", p); mark("goal", goal);
+  let label, color, pts=0;
+  if (err < .02)      { label="Parfait !";  color="var(--ok)";     pts=100; streak++; tone(880,.18); setTimeout(()=>tone(1320,.2),90); }
+  else if (err < .05) { label="Très bien";  color="var(--beam)";   pts=60;  streak++; tone(660,.15); }
+  else if (err < .09) { label="Presque…";   color="var(--target)"; pts=20;  streak=0; tone(420,.15); }
+  else                { label="Raté";       color="var(--bad)";    lives--; streak=0; tone(150,.35,"sawtooth",.05); }
+  const nm = Math.min(5, 1+Math.floor(streak/3));
+  if (nm>mult){ const m=$("mult"); m.classList.add("pop"); setTimeout(()=>m.classList.remove("pop"),180); }
+  mult = streak ? nm : 1;
+  score += pts*mult; round++;
+  hud();
+  $("result").innerHTML = `<span style="color:${color};text-shadow:0 0 14px ${color}">${label}${pts?" +"+pts*mult:""}</span><small>Écart : ${pct} % de la barre</small>`;
+  $("tip").textContent = "Touche pour continuer";
+  timer = setTimeout(()=> lives<=0 ? over() : next(), lives<=0 ? 1500 : 1700);
+}
+function over(){
+  running=false; clearTimeout(timer);
+  const rec = score>best; if(rec){ best=score; try{ localStorage.setItem("fracSliceBest",best); }catch(e){} }
+  const o=$("overlay");
+  o.innerHTML = `<p class="rules">Partie terminée</p><p class="big">${score}</p>
+    <p class="best">${rec?"Nouveau record !":"Record : "+best}</p>
+    <p class="rules">${round} coupe${round>1?"s":""} · niveau ${level()} atteint</p><button class="go" id="go">Rejouer</button>`;
+  o.hidden=false; $("go").onclick=play; $("go").focus();
+}
+function play(){
+  try { ac = ac || new (window.AudioContext||window.webkitAudioContext)(); ac.resume(); } catch(e){}
+  score=0; lives=3; streak=0; mult=1; round=0; n=0; d=0; running=true;
+  $("overlay").hidden=true; hud(); next();
+}
+$("go").onclick=play;
+// Demo state behind the start screen
+n=3; d=4; round=0; score=0; lives=3; mult=1; for(let i=1;i<4;i++) mark("tick", i/4); hud();
+</script>
+
+</body></html>

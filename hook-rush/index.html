@@ -1,0 +1,446 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Hook Rush</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one full-screen canvas (vertical shaft), HUD pinned top, overlays centered. Deliberately single dark neon theme. */
+:root{
+  --void:#05070d;
+  --ink:#e6fff2;
+  --muted:#7f9a8c;
+  --rope:#3dffa0;
+  --anchor:#b56cff;
+  --danger:#ff3d6e;
+  --display:"Chakra Petch", "Arial Narrow", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;background:var(--void);color:var(--ink);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hud{position:fixed;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:flex-start;
+  padding-top:calc(env(safe-area-inset-top,0px) + 12px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  pointer-events:none;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.dist{font-size:30px;font-weight:700;color:var(--rope);text-shadow:0 0 12px rgba(61,255,160,.55)}
+.dist small{font-size:14px;color:var(--muted);margin-left:2px}
+.side{text-align:right;font-size:13px;color:var(--muted);display:grid;gap:4px}
+.side b{color:var(--anchor);font-weight:700}
+.overlay{position:fixed;inset:0;display:grid;place-items:center;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:radial-gradient(circle at 50% 45%,rgba(5,7,13,.55),rgba(5,7,13,.88))}
+.card{display:grid;gap:14px;justify-items:center;text-align:center;max-width:340px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(44px,13vw,64px);line-height:.95;margin:0;letter-spacing:.02em;
+  color:var(--ink);text-shadow:0 0 18px rgba(61,255,160,.6)}
+h1 span{color:var(--rope)}
+.tag{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--anchor)}
+.how{font-size:15px;line-height:1.5;color:var(--muted);margin:0}
+.how strong{color:var(--ink);font-weight:600}
+.big{font-family:var(--mono);font-size:44px;font-weight:700;color:var(--rope);font-variant-numeric:tabular-nums}
+.row{font-family:var(--mono);font-size:13px;color:var(--muted);display:flex;gap:18px}
+.row b{color:var(--ink)}
+button{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--void);background:var(--rope);border:0;border-radius:999px;padding:14px 34px;cursor:pointer;
+  box-shadow:0 0 24px rgba(61,255,160,.45)}
+button:focus-visible{outline:3px solid var(--anchor);outline-offset:3px}
+.new{color:var(--anchor);font-family:var(--mono);font-size:12px;letter-spacing:.15em}
+@media (prefers-reduced-motion:no-preference){button{animation:pulse 1.8s ease-in-out infinite}}
+@keyframes pulse{50%{box-shadow:0 0 38px rgba(61,255,160,.75)}}
+</style>
+
+<canvas id="c"></canvas>
+
+<div class="hud">
+  <div class="dist"><span id="dist">0</span><small>m</small></div>
+  <div class="side"><div>Gemmes <b id="gems">0</b></div><div>Record <span id="best">0</span></div></div>
+</div>
+
+<div class="overlay" id="start">
+  <div class="card">
+    <div class="tag">Ascension infinie</div>
+    <h1>HOOK<br><span>RUSH</span></h1>
+    <p class="how"><strong>Touche l'écran</strong> pour lancer le grappin vers le point suivant.<br>Il n'est accessible que lorsqu'il s'allume <strong>en vert</strong> dans ton cercle de portée : balance-toi pour t'en approcher.<br>Le laser monte de plus en plus vite : grimpe plus vite que lui.</p>
+    <button id="play">Grimper</button>
+  </div>
+</div>
+
+<div class="overlay" id="over" hidden>
+  <div class="card">
+    <div class="tag">Rattrapé par le laser</div>
+    <div class="big"><span id="final">0</span> m</div>
+    <div class="row"><span>Gemmes <b id="fgems">0</b></span><span>Score <b id="fscore">0</b></span><span>Record <b id="fbest">0</b></span></div>
+    <div class="new" id="newrec" hidden>NOUVEAU RECORD</div>
+    <button id="again">Rejouer</button>
+  </div>
+</div>
+
+<script>
+(() => {
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+const VIEW_W = 360, WALL = 16;
+let dpr = 1, cw = 0, ch = 0, scale = 1, viewH = 700;
+
+function resize(){
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cw = innerWidth; ch = innerHeight;
+  cv.width = cw * dpr; cv.height = ch * dpr;
+  scale = cw / VIEW_W;
+  // on wide screens keep the shaft readable: limit by height too
+  if (ch / scale < 560) scale = ch / 560;
+  viewH = ch / scale;
+}
+addEventListener('resize', resize); resize();
+const offX = () => (cw / scale - VIEW_W) / 2;
+
+let best = 0;
+try { best = +localStorage.getItem('hookrush-climb-best') || 0; } catch(e){}
+$('best').textContent = best;
+
+const G = 1400, MAXV = 1500;
+let state = 'menu', p, anchors, gems, parts, trail, cam, hook, holding, lastY, lastX, gemCount, height, t, shake, laser, laserOn;
+
+function reset(){
+  p = {x:VIEW_W/2, y:-14, vx:0, vy:0, onPlat:true};
+  anchors = []; gems = []; parts = []; trail = [];
+  cam = {y: -viewH + 140};
+  hook = null; holding = false; gemCount = 0; height = 0; t = 0; shake = 0;
+  laser = 220; laserOn = false;
+  anchors.push({x:VIEW_W/2 + 60, y:-200, pulse:0});
+  lastY = -200; lastX = VIEW_W/2 + 60;
+  gen();
+}
+function rnd(a,b){ return a + Math.random()*(b-a); }
+function gen(){
+  while (lastY > cam.y - 500){
+    const diff = Math.min(1, -lastY / 15000);
+    const gap = rnd(150, 210) + diff * 70;
+    const ny = lastY - gap;
+    let nx = lastX + rnd(90, 190) * (Math.random() < .5 ? -1 : 1);
+    if (nx < 50 || nx > VIEW_W - 50) nx = lastX + (lastX > VIEW_W/2 ? -1 : 1) * rnd(90, 170);
+    nx = Math.max(50, Math.min(VIEW_W - 50, nx));
+    if (Math.random() < 0.5){
+      gems.push({x:(nx + lastX)/2 + rnd(-40,40), y:lastY - gap*rnd(.35,.65), got:false, ph:Math.random()*6});
+    }
+    anchors.push({x:nx, y:ny, pulse:0});
+    lastY = ny; lastX = nx;
+  }
+  const bottom = cam.y + viewH + 300;
+  anchors = anchors.filter(a => a.y < bottom || a === hook);
+  gems = gems.filter(g => g.y < bottom);
+}
+
+function target(){
+  // always the next point above: above the player, and above the current hook if hooked
+  const ceil = Math.min(p.y, hook ? hook.y : p.y) - 20;
+  let bestA = null, bs = 1e9;
+  for (const a of anchors){
+    if (a === hook || a.y > ceil) continue;
+    const d = Math.hypot(a.x - p.x, a.y - p.y);
+    if (d < bs){ bs = d; bestA = a; }
+  }
+  return bestA;
+}
+
+function burst(x, y, col, n, sp){
+  for (let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2, v = rnd(sp*0.3, sp);
+    parts.push({x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:rnd(.3,.7), max:.7, col});
+  }
+}
+
+// One tap = the grappin flies to the highlighted point above and pulls you up.
+const RANGE = 240;
+let fizzle = 0;
+const inRange = a => a && Math.hypot(a.x - p.x, a.y - p.y) <= RANGE;
+function press(){
+  if (state !== 'play') return;
+  const a = target();
+  if (!inRange(a)){ fizzle = 0.35; return; }   // too far: swing higher first
+  if (hook) burst(p.x, p.y, '#3dffa0', 8, 180);
+  hook = a; a.pulse = 1;
+  hook.len = Math.hypot(p.x - a.x, p.y - a.y);
+  if (p.onPlat){ p.onPlat = false; }
+  // light tug toward the new point; height comes from swinging
+  const dx = a.x - p.x, dy = a.y - p.y, d = Math.hypot(dx, dy) || 1;
+  p.vx += dx/d * 220; p.vy += dy/d * 220;
+  laserOn = true;
+  burst(a.x, a.y, '#b56cff', 14, 260);
+}
+function release(){}
+
+function step(dt){
+  t += dt; fizzle = Math.max(0, fizzle - dt);
+  if (!p.onPlat){
+    p.vy += G * dt;
+    if (hook){
+      hook.len = Math.max(75, hook.len - 160*dt);
+      const nx = p.x - hook.x, ny = p.y - hook.y, d = Math.hypot(nx, ny) || 1;
+      const tx = -ny/d, ty = nx/d, vt = p.vx*tx + p.vy*ty;
+      const s = Math.sign(vt) || 1;
+      p.vx += tx * s * 260 * dt; p.vy += ty * s * 260 * dt;
+    }
+    const sp = Math.hypot(p.vx, p.vy);
+    if (sp > MAXV){ p.vx *= MAXV/sp; p.vy *= MAXV/sp; }
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    if (hook){
+      const dx = p.x - hook.x, dy = p.y - hook.y, d = Math.hypot(dx, dy);
+      if (d > hook.len){
+        const nx = dx/d, ny = dy/d;
+        p.x = hook.x + nx*hook.len; p.y = hook.y + ny*hook.len;
+        const vr = p.vx*nx + p.vy*ny;
+        if (vr > 0){ p.vx -= nx*vr; p.vy -= ny*vr; }
+      }
+    }
+    // side walls bounce
+    if (p.x < WALL + 10){ p.x = WALL + 10; p.vx = Math.abs(p.vx) * .6; burst(p.x, p.y, '#3dffa0', 5, 120); }
+    if (p.x > VIEW_W - WALL - 10){ p.x = VIEW_W - WALL - 10; p.vx = -Math.abs(p.vx) * .6; burst(p.x, p.y, '#3dffa0', 5, 120); }
+    // land back on start platform
+    if (!hook && p.y > -14 && p.y < 10 && p.vy > 0 && p.x > 90 && p.x < 270){ p.y = -14; p.vy = 0; p.vx = 0; p.onPlat = true; }
+  }
+  for (const g of gems){
+    if (!g.got && Math.hypot(g.x-p.x, g.y-p.y) < 30){
+      g.got = true; gemCount++; burst(g.x, g.y, '#b56cff', 18, 320); shake = 6;
+    }
+  }
+  for (const q of parts){ q.x += q.vx*dt; q.y += q.vy*dt; q.vx *= .96; q.vy *= .96; q.life -= dt; }
+  parts = parts.filter(q => q.life > 0);
+  trail.push({x:p.x, y:p.y}); if (trail.length > 22) trail.shift();
+  for (const a of anchors) a.pulse = Math.max(0, a.pulse - dt*2);
+
+  height = Math.max(height, Math.floor(-p.y / 20));
+
+  // camera only climbs
+  const ty = p.y - viewH * 0.58;
+  if (ty < cam.y) cam.y += (ty - cam.y) * Math.min(1, dt*5);
+
+  // rising laser: speeds up with height, never lags too far off-screen
+  if (laserOn){
+    const speed = Math.min(230, 38 + height * 0.09);
+    laser -= speed * dt;
+    const maxBelow = cam.y + viewH + 60;
+    if (laser > maxBelow) laser = maxBelow;
+  }
+  shake *= .88;
+  gen();
+
+  if (p.y > laser - 4) gameOver();
+}
+
+function gameOver(){
+  state = 'over'; hook = null;
+  burst(p.x, p.y, '#ff3d6e', 40, 420); shake = 10;
+  const score = height + gemCount * 10;
+  let rec = false;
+  if (score > best){ best = score; rec = true; try{ localStorage.setItem('hookrush-climb-best', best); }catch(e){} }
+  $('final').textContent = height; $('fgems').textContent = gemCount;
+  $('fscore').textContent = score; $('fbest').textContent = best;
+  $('best').textContent = best; $('newrec').hidden = !rec;
+  setTimeout(() => { $('over').hidden = false; $('again').focus(); }, 700);
+}
+
+/* ---------- drawing ---------- */
+function glowDot(x, y, r, col, a){
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, col.replace('A', a)); g.addColorStop(1, col.replace('A', 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+}
+function hex(x, y, r, rot){
+  ctx.beginPath();
+  for (let i=0;i<6;i++){ const a = rot + i*Math.PI/3; ctx[i?'lineTo':'moveTo'](x+Math.cos(a)*r, y+Math.sin(a)*r); }
+  ctx.closePath();
+}
+
+function draw(){
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#05070d'; ctx.fillRect(0, 0, cw, ch);
+  const sx = (Math.random()-.5)*shake, sy = (Math.random()-.5)*shake;
+  const ox = offX();
+  ctx.setTransform(dpr*scale, 0, 0, dpr*scale, dpr*((ox + sx)*scale), dpr*(-cam.y*scale + sy*scale));
+
+  // parallax dot grid
+  ctx.fillStyle = 'rgba(120,160,190,0.10)';
+  const par = cam.y * 0.5;
+  for (let gx = 30; gx < VIEW_W; gx += 50){
+    for (let gy = Math.floor(par/50)*50 - 50; gy < par + viewH + 50; gy += 50){
+      ctx.fillRect(gx, gy + cam.y - par, 2, 2);
+    }
+  }
+
+  // shaft walls
+  ctx.fillStyle = '#0b111b';
+  ctx.fillRect(-200, cam.y - 20, 200 + WALL, viewH + 40);
+  ctx.fillRect(VIEW_W - WALL, cam.y - 20, 200 + WALL, viewH + 40);
+  ctx.strokeStyle = 'rgba(61,255,160,0.25)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(WALL, cam.y - 20); ctx.lineTo(WALL, cam.y + viewH + 20);
+  ctx.moveTo(VIEW_W - WALL, cam.y - 20); ctx.lineTo(VIEW_W - WALL, cam.y + viewH + 20); ctx.stroke();
+  // height ticks every 10 m
+  ctx.font = '500 10px "JetBrains Mono", monospace'; ctx.textAlign = 'left';
+  for (let m = Math.floor(-(cam.y + viewH)/200)*10; m * 20 < -cam.y + 40; m += 10){
+    if (m <= 0) continue;
+    const y = -m * 20;
+    ctx.fillStyle = 'rgba(127,154,140,0.5)';
+    ctx.fillRect(WALL, y, 8, 1.5);
+    ctx.fillText(m, WALL + 11, y + 4);
+  }
+
+  // start platform
+  if (cam.y + viewH > -30){
+    ctx.fillStyle = '#1a2230'; ctx.strokeStyle = '#3dffa0'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(90, 0, 180, 22, 5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(61,255,160,.6)';
+    for (let i=0;i<5;i++) ctx.fillRect(104 + i*34, 7, 14, 8);
+  }
+
+  // gems
+  for (const g of gems){
+    if (g.got) continue;
+    const bob = Math.sin(t*3 + g.ph) * 5;
+    glowDot(g.x, g.y+bob, 30, 'rgba(181,108,255,A)', 0.35);
+    ctx.strokeStyle = '#d4a8ff'; ctx.lineWidth = 2.5;
+    hex(g.x, g.y+bob, 9, t*1.5 + g.ph); ctx.stroke();
+    ctx.fillStyle = '#f2e6ff'; ctx.beginPath(); ctx.arc(g.x, g.y+bob, 2.5, 0, 7); ctx.fill();
+  }
+
+  // anchors
+  const tgt = state === 'play' ? target() : null;
+  const reach = inRange(tgt);
+  // grappin range around the player
+  if (state === 'play'){
+    ctx.strokeStyle = fizzle > 0 ? `rgba(255,61,110,${0.2 + fizzle})` : (reach ? 'rgba(61,255,160,0.14)' : 'rgba(127,154,140,0.12)');
+    ctx.lineWidth = fizzle > 0 ? 2.5 : 1.5;
+    ctx.beginPath(); ctx.arc(p.x, p.y, RANGE, 0, 7); ctx.stroke();
+  }
+  // aim line only when the next point is reachable
+  if (tgt && reach){
+    ctx.strokeStyle = 'rgba(61,255,160,0.6)'; ctx.lineWidth = 2;
+    ctx.setLineDash([4, 8]); ctx.lineDashOffset = -t*40;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(tgt.x, tgt.y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  for (const a of anchors){
+    const r = 34 + a.pulse*20;
+    glowDot(a.x, a.y, r, 'rgba(181,108,255,A)', 0.45);
+    ctx.fillStyle = '#2a1640'; ctx.beginPath(); ctx.arc(a.x, a.y, 11, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#b56cff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(a.x, a.y, 11, 0, 7); ctx.stroke();
+    ctx.fillStyle = '#e7d2ff'; ctx.beginPath(); ctx.arc(a.x, a.y, 3.5, 0, 7); ctx.fill();
+    if (a === tgt){
+      const pr = 22 + (reach ? Math.sin(t*6) * 4 : 0);
+      ctx.strokeStyle = reach ? 'rgba(61,255,160,0.9)' : 'rgba(127,154,140,0.5)'; ctx.lineWidth = 2.5;
+      ctx.setLineDash([6, 6]); ctx.lineDashOffset = -t*30;
+      ctx.beginPath(); ctx.arc(a.x, a.y, pr, 0, 7); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // trail
+  for (let i=1;i<trail.length;i++){
+    const k = i/trail.length;
+    ctx.strokeStyle = `rgba(61,255,160,${k*0.35})`; ctx.lineWidth = k*8;
+    ctx.beginPath(); ctx.moveTo(trail[i-1].x, trail[i-1].y); ctx.lineTo(trail[i].x, trail[i].y); ctx.stroke();
+  }
+
+  // rope
+  if (hook && state === 'play'){
+    ctx.strokeStyle = '#3dffa0'; ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#3dffa0'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(hook.x, hook.y); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // player
+  if (state !== 'over'){
+    glowDot(p.x, p.y, 34, 'rgba(61,255,160,A)', 0.35);
+    ctx.save(); ctx.translate(p.x, p.y);
+    const lean = p.onPlat ? 0 : Math.max(-0.6, Math.min(0.6, p.vx/1800));
+    ctx.rotate(lean);
+    ctx.fillStyle = '#0e2a1e'; ctx.strokeStyle = '#3dffa0'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.roundRect(-11, -12, 22, 24, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3dffa0';
+    const look = Math.max(-2, Math.min(3, p.vx/300));
+    const up = p.vy < -200 ? -2 : 0;
+    ctx.fillRect(-6 + look, -5 + up, 4, 5); ctx.fillRect(2 + look, -5 + up, 4, 5);
+    const sw = Math.sin(t*14) * (p.onPlat ? 0 : 4);
+    ctx.strokeStyle = '#3dffa0'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-5, 12); ctx.lineTo(-6 - sw, 18); ctx.moveTo(5, 12); ctx.lineTo(6 + sw, 18); ctx.stroke();
+    ctx.restore();
+  }
+
+  // rising laser + red haze below it
+  const ly = laser;
+  const haze = ctx.createLinearGradient(0, ly, 0, ly + 260);
+  haze.addColorStop(0, 'rgba(255,61,110,0.35)'); haze.addColorStop(1, 'rgba(255,61,110,0.05)');
+  ctx.fillStyle = haze; ctx.fillRect(-200, ly, VIEW_W + 400, 2000);
+  const glow = ctx.createLinearGradient(0, ly - 60, 0, ly);
+  glow.addColorStop(0, 'rgba(255,61,110,0)'); glow.addColorStop(1, 'rgba(255,61,110,0.28)');
+  ctx.fillStyle = glow; ctx.fillRect(-200, ly - 60, VIEW_W + 400, 60);
+  ctx.strokeStyle = '#ff3d6e'; ctx.lineWidth = 3;
+  ctx.shadowColor = '#ff3d6e'; ctx.shadowBlur = 16;
+  ctx.beginPath();
+  for (let x = -20; x <= VIEW_W + 20; x += 10){
+    const yy = ly + Math.sin(x*0.08 + t*9) * 2;
+    x === -20 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+  }
+  ctx.stroke(); ctx.shadowBlur = 0;
+
+  // particles
+  for (const q of parts){
+    ctx.globalAlpha = Math.max(0, q.life / q.max);
+    ctx.fillStyle = q.col; ctx.fillRect(q.x-2, q.y-2, 4, 4);
+  }
+  ctx.globalAlpha = 1;
+
+  // hint on platform
+  if (state === 'play' && p.onPlat){
+    ctx.fillStyle = 'rgba(230,255,242,0.8)';
+    ctx.font = '600 16px "Chakra Petch", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Touche pour lancer le grappin', VIEW_W/2, -70);
+  }
+
+  // danger vignette when the laser is close
+  if (state === 'play' && laserOn){
+    const gapPx = (laser - p.y);
+    if (gapPx < 220){
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const k = 1 - gapPx / 220;
+      const v = ctx.createLinearGradient(0, ch, 0, ch * 0.55);
+      v.addColorStop(0, `rgba(255,61,110,${0.35*k})`); v.addColorStop(1, 'rgba(255,61,110,0)');
+      ctx.fillStyle = v; ctx.fillRect(0, 0, cw, ch);
+    }
+  }
+}
+
+let last = performance.now(), acc = 0;
+function loop(now){
+  let dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (state === 'play'){
+    acc += dt;
+    while (acc >= 1/120){ step(1/120); acc -= 1/120; }
+  } else {
+    for (const q of parts){ q.x += q.vx*dt; q.y += q.vy*dt; q.life -= dt; }
+    parts = parts.filter(q => q.life > 0); t += dt; shake *= .9;
+  }
+  $('dist').textContent = height; $('gems').textContent = gemCount;
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function start(){
+  reset(); state = 'play'; acc = 0;
+  $('start').hidden = true; $('over').hidden = true;
+}
+$('play').addEventListener('click', e => { e.stopPropagation(); start(); });
+$('again').addEventListener('click', e => { e.stopPropagation(); start(); });
+
+cv.addEventListener('pointerdown', e => { e.preventDefault(); press(); });
+addEventListener('pointerup', release);
+addEventListener('pointercancel', release);
+addEventListener('keydown', e => { if (e.code === 'Space' && !e.repeat){ e.preventDefault(); if (state==='play') press(); else start(); } });
+addEventListener('keyup', e => { if (e.code === 'Space') release(); });
+
+reset(); state = 'menu';
+requestAnimationFrame(loop);
+})();
+</script>
+
+</body></html>

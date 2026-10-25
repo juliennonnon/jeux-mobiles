@@ -1,0 +1,263 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Rocket Tap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Russo+One&display=swap">
+<style>
+/* Layout : jeu plein écran sur canvas, HUD collé en haut, panneaux centrés par-dessus */
+:root{
+  --void:#14062e;
+  --cave:#22104a;
+  --rock:#0d0420;
+  --edge:#f3ecff;
+  --flame:#ffd83a;
+  --ink:#f3ecff;
+  --muted:#b9a6e6;
+  --display:"Russo One","Chakra Petch",system-ui,sans-serif;
+  --ui:"Chakra Petch",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--void);color:var(--ink);font-family:var(--ui)}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.hud{position:fixed;left:0;right:0;top:0;padding-top:calc(env(safe-area-inset-top,0px) + 14px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;font-variant-numeric:tabular-nums}
+.score{font-family:var(--display);font-size:44px;line-height:1;text-shadow:0 0 18px rgba(255,216,58,.45)}
+.score small{font-size:18px;color:var(--muted);margin-left:4px}
+.best{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);text-align:right;padding-top:6px}
+.best b{display:block;color:var(--ink);font-size:20px;letter-spacing:0}
+.panel{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:radial-gradient(ellipse at center,rgba(20,6,46,.55),rgba(20,6,46,.88));pointer-events:none}
+.panel h1{font-family:var(--display);font-weight:400;font-size:clamp(46px,13vw,84px);line-height:.95;margin:0;letter-spacing:.02em;text-wrap:balance}
+.panel h1 span{color:var(--flame);display:block;text-shadow:0 0 24px rgba(255,216,58,.5)}
+.panel p{margin:0;max-width:30ch;color:var(--muted);font-size:16px;line-height:1.5}
+.tag{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--flame)}
+.big{font-family:var(--display);font-size:72px;line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-size:24px;color:var(--muted)}
+.cta{margin-top:8px;font-size:15px;letter-spacing:.18em;text-transform:uppercase;border:2px solid var(--edge);padding:12px 22px;border-radius:4px;animation:pulse 1.4s ease-in-out infinite}
+.record{color:var(--flame);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:14px}
+@keyframes pulse{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.cta{animation:none}}
+</style>
+
+<canvas id="c"></canvas>
+<div class="hud" id="hud" hidden>
+  <div class="score" id="score">0<small>m</small></div>
+  <div class="best">Record<b id="bestHud">0 m</b></div>
+</div>
+
+<div class="panel" id="start">
+  <div class="tag">Grotte n° 7</div>
+  <h1>Rocket<span>Tap</span></h1>
+  <p>Maintiens ton doigt pour monter, relâche pour descendre. Le passage se resserre et la fusée accélère.</p>
+  <div class="cta">Touche pour décoller</div>
+</div>
+
+<div class="panel" id="over" hidden>
+  <div class="tag">Crash</div>
+  <div class="big" id="final">0<small>m</small></div>
+  <div class="record" id="newRec" hidden>Nouveau record</div>
+  <p id="bestLine">Record : 0 m</p>
+  <div class="cta" id="again">Touche pour rejouer</div>
+</div>
+
+<script>
+(()=>{
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+const WORLD_H=1000,SEG=60,R=9;
+let dpr=1,cssW=0,cssH=0,scale=1,viewW=1000;
+let best=0;try{best=+localStorage.getItem('rocketTapBest')||0}catch(e){}
+$('bestHud').textContent=best+' m';
+
+function resize(){
+  dpr=Math.min(window.devicePixelRatio||1,2);
+  cssW=innerWidth;cssH=innerHeight;
+  cv.width=cssW*dpr;cv.height=cssH*dpr;
+  scale=cssH/WORLD_H;viewW=cssW/scale;
+}
+addEventListener('resize',resize);resize();
+
+// motif grillagé des parois
+const tile=document.createElement('canvas');tile.width=tile.height=40;
+{const t=tile.getContext('2d');t.fillStyle='#0d0420';t.fillRect(0,0,40,40);
+ t.strokeStyle='#2c1660';t.lineWidth=3;t.strokeRect(4,4,32,32);
+ t.strokeStyle='#1a0a3a';t.lineWidth=1;t.beginPath();t.moveTo(4,20);t.lineTo(36,20);t.moveTo(20,4);t.lineTo(20,36);t.stroke();}
+const pat=ctx.createPattern(tile,'repeat');
+
+// étoiles
+const stars=[];for(let i=0;i<120;i++)stars.push({x:Math.random(),y:Math.random(),z:.2+Math.random()*.6,s:Math.random()*2+.6});
+
+let state='start',pts,spikes,rocket,trail,parts,dist,speed,holding=false,overAt=0,sinceSpike,runLeft,slope,shake;
+
+function gapAt(d){return Math.max(240,560-d*0.011)}
+function reset(){
+  pts=[];spikes=[];trail=[];parts=[];dist=0;speed=480;sinceSpike=0;runLeft=12;slope=0;shake=0;
+  for(let i=0;i<4;i++)push(i===0);
+  rocket={x:viewW*0.3,y:500,vy:0,alive:true};
+  for(let i=-6;i<0;i++)pts.unshift({x:pts[0].x-SEG,top:pts[0].top,bot:pts[0].bot});
+}
+function push(first){
+  const last=pts[pts.length-1];
+  const x=last?last.x+SEG:-SEG*2;
+  const g=gapAt(x);
+  let c=last?(last.top+last.bot)/2:500;
+  if(--runLeft<=0){runLeft=3+Math.floor(Math.random()*6);
+    const lvl=Math.min(1,x/25000);
+    slope=(Math.random()*2-1)*(0.35+0.5*lvl);}
+  if(x<SEG*14)slope=0;
+  c+=slope*SEG;
+  const lo=g/2+40,hi=WORLD_H-g/2-40;
+  if(c<lo){c=lo;slope=Math.abs(slope)}if(c>hi){c=hi;slope=-Math.abs(slope)}
+  // petites dents pour un relief géométrique
+  const jag=x>SEG*14?(Math.random()<.5?18:0):0;
+  pts.push({x,top:c-g/2+(Math.random()<.5?jag:0),bot:c+g/2-(Math.random()<.5?jag:0)});
+  // pics : placés sur l'avant-dernier point pour que ses voisins existent
+  sinceSpike++;
+  const n=pts.length;
+  if(n>3&&x>SEG*18&&sinceSpike>3){
+    const p=pts[n-2],lvl=Math.min(1,x/30000);
+    if(Math.random()<0.22+0.3*lvl){
+      const room=(p.bot-p.top)-205;
+      const h=Math.min(room,70+Math.random()*(60+90*lvl));
+      if(h>45){
+        const top=Math.random()<.5;
+        const xl=p.x-38,xr=p.x+38;
+        if(top)spikes.push({ax:p.x,ay:p.top+h,bx:xl,by:wallAt(xl).top-6,cx:xr,cy:wallAt(xr).top-6});
+        else spikes.push({ax:p.x,ay:p.bot-h,bx:xl,by:wallAt(xl).bot+6,cx:xr,cy:wallAt(xr).bot+6});
+        sinceSpike=0;
+      }
+    }
+  }
+}
+function wallAt(x){
+  const i=Math.floor((x-pts[0].x)/SEG);
+  const a=pts[Math.max(0,Math.min(pts.length-1,i))],b=pts[Math.max(0,Math.min(pts.length-1,i+1))];
+  const t=b===a?0:Math.max(0,Math.min(1,(x-a.x)/SEG));
+  return{top:a.top+(b.top-a.top)*t,bot:a.bot+(b.bot-a.bot)*t};
+}
+function inTri(px,py,s){
+  const d1=(px-s.bx)*(s.ay-s.by)-(s.ax-s.bx)*(py-s.by);
+  const d2=(px-s.cx)*(s.by-s.cy)-(s.bx-s.cx)*(py-s.cy);
+  const d3=(px-s.ax)*(s.cy-s.ay)-(s.cx-s.ax)*(py-s.ay);
+  const neg=d1<0||d2<0||d3<0,pos=d1>0||d2>0||d3>0;return!(neg&&pos);
+}
+
+function start(){reset();state='play';$('start').hidden=true;$('over').hidden=true;$('hud').hidden=false}
+function crash(){
+  state='over';rocket.alive=false;overAt=performance.now();shake=18;
+  for(let i=0;i<46;i++){const a=Math.random()*Math.PI*2,v=150+Math.random()*520;
+    parts.push({x:rocket.x,y:rocket.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1,c:Math.random()<.6?'#ffd83a':'#f3ecff'})}
+  try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}
+  const m=Math.floor(dist/50);const rec=m>best;
+  if(rec){best=m;try{localStorage.setItem('rocketTapBest',best)}catch(e){}}
+  setTimeout(()=>{
+    $('final').innerHTML=m+'<small>m</small>';$('newRec').hidden=!rec;
+    $('bestLine').textContent='Record : '+best+' m';$('bestHud').textContent=best+' m';
+    $('over').hidden=false;
+  },650);
+}
+
+function down(e){
+  if(e&&e.cancelable)e.preventDefault();
+  holding=true;
+  if(state==='start')start();
+  else if(state==='over'&&performance.now()-overAt>900)start();
+}
+function up(){holding=false}
+cv.addEventListener('pointerdown',down);
+addEventListener('pointerup',up);addEventListener('pointercancel',up);
+document.querySelectorAll('.panel').forEach(p=>p.style.pointerEvents='none');
+addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){if(!e.repeat)down(e)}});
+addEventListener('keyup',e=>{if(e.code==='Space'||e.code==='ArrowUp')up()});
+addEventListener('blur',up);
+
+function update(dt){
+  if(state==='play'){
+    speed=Math.min(920,480+dist*0.009);
+    rocket.vy=holding?-speed:speed;
+    rocket.x+=speed*dt;rocket.y+=rocket.vy*dt;dist+=speed*dt;
+    trail.push({x:rocket.x,y:rocket.y});
+    const w=wallAt(rocket.x);
+    if(rocket.y-R<w.top||rocket.y+R>w.bot)crash();
+    else for(const s of spikes){
+      if(Math.abs(s.ax-rocket.x)>60)continue;
+      if(inTri(rocket.x,rocket.y,s)||inTri(rocket.x+R*.8,rocket.y,s)||inTri(rocket.x,rocket.y-R*.8,s)||inTri(rocket.x,rocket.y+R*.8,s)){crash();break}
+    }
+    $('score').innerHTML=Math.floor(dist/50)+'<small>m</small>';
+  }
+  const camX=rocket.x-viewW*0.3;
+  while(pts[pts.length-1].x<camX+viewW+SEG*3)push();
+  while(pts.length>4&&pts[1].x<camX-SEG*2)pts.shift();
+  spikes=spikes.filter(s=>s.cx>camX-80);
+  trail=trail.filter(p=>p.x>camX-20);
+  for(const p of parts){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.96;p.vy=p.vy*.96+500*dt;p.life-=dt*1.1}
+  parts=parts.filter(p=>p.life>0);
+  shake*=Math.pow(.02,dt);
+}
+
+function draw(t){
+  const camX=rocket.x-viewW*0.3;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const g=ctx.createLinearGradient(0,0,0,cssH);g.addColorStop(0,'#2a0f5c');g.addColorStop(.5,'#3b168a');g.addColorStop(1,'#22104a');
+  ctx.fillStyle=g;ctx.fillRect(0,0,cssW,cssH);
+  ctx.fillStyle='#ffffff';
+  for(const s of stars){const x=((s.x*cssW-camX*scale*s.z*.15)%cssW+cssW)%cssW;
+    ctx.globalAlpha=.25+s.z*.6;ctx.fillRect(x,s.y*cssH,s.s,s.s)}
+  ctx.globalAlpha=1;
+  const sx=(Math.random()-.5)*shake,sy=(Math.random()-.5)*shake;
+  ctx.setTransform(dpr*scale,0,0,dpr*scale,(-camX*scale+sx)*dpr,sy*dpr);
+
+  // traînée
+  if(trail.length>1){
+    ctx.lineJoin='round';ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(trail[0].x,trail[0].y);for(const p of trail)ctx.lineTo(p.x,p.y);
+    ctx.strokeStyle='rgba(255,216,58,.22)';ctx.lineWidth=30;ctx.stroke();
+    ctx.strokeStyle='rgba(255,216,58,.55)';ctx.lineWidth=14;ctx.stroke();
+    ctx.strokeStyle='#fff6c4';ctx.lineWidth=5;ctx.stroke();
+  }
+
+  // parois
+  const path=(side)=>{
+    ctx.beginPath();const e=side==='top'?-60:WORLD_H+60;
+    ctx.moveTo(pts[0].x,e);for(const p of pts)ctx.lineTo(p.x,p[side]);ctx.lineTo(pts[pts.length-1].x,e);ctx.closePath();
+  };
+  for(const side of['top','bot']){
+    path(side);ctx.fillStyle=pat;ctx.fill();
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0][side]);for(const p of pts)ctx.lineTo(p.x,p[side]);
+    ctx.lineJoin='miter';ctx.strokeStyle='rgba(243,236,255,.25)';ctx.lineWidth=12;ctx.stroke();
+    ctx.strokeStyle='#f3ecff';ctx.lineWidth=4;ctx.stroke();
+  }
+  for(const s of spikes){
+    ctx.beginPath();ctx.moveTo(s.bx,s.by);ctx.lineTo(s.ax,s.ay);ctx.lineTo(s.cx,s.cy);ctx.closePath();
+    ctx.fillStyle='#0d0420';ctx.fill();
+    ctx.beginPath();ctx.moveTo(s.bx,s.by);ctx.lineTo(s.ax,s.ay);ctx.lineTo(s.cx,s.cy);
+    ctx.strokeStyle='rgba(243,236,255,.25)';ctx.lineWidth=12;ctx.stroke();
+    ctx.strokeStyle='#f3ecff';ctx.lineWidth=4;ctx.stroke();
+  }
+
+  // fusée
+  if(rocket.alive){
+    const ang=state==='play'?(holding?-Math.PI/4:Math.PI/4):Math.sin(t/300)*.15;
+    ctx.save();ctx.translate(rocket.x,rocket.y);ctx.rotate(ang);
+    ctx.beginPath();ctx.moveTo(26,0);ctx.quadraticCurveTo(6,-20,-16,-16);ctx.lineTo(-10,0);ctx.lineTo(-16,16);ctx.quadraticCurveTo(6,20,26,0);ctx.closePath();
+    ctx.fillStyle='#ffffff';ctx.fill();ctx.strokeStyle='#14062e';ctx.lineWidth=3;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(16,0);ctx.lineTo(0,-6);ctx.lineTo(-6,-12);ctx.lineTo(-4,0);ctx.lineTo(-6,12);ctx.lineTo(0,6);ctx.closePath();
+    ctx.fillStyle='#ffd83a';ctx.fill();
+    ctx.restore();
+  }
+  for(const p of parts){ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.c;ctx.fillRect(p.x-5,p.y-5,10,10)}
+  ctx.globalAlpha=1;
+}
+
+let lastT=performance.now();
+function loop(t){
+  const dt=Math.min(.033,(t-lastT)/1000);lastT=t;
+  if(state==='start'){rocket.x+=300*dt;rocket.y=500+Math.sin(t/500)*40;dist=0;
+    const camX=rocket.x-viewW*0.3;while(pts[pts.length-1].x<camX+viewW+SEG*3)push();while(pts.length>4&&pts[1].x<camX-SEG*2)pts.shift();
+    trail.push({x:rocket.x,y:rocket.y});trail=trail.filter(p=>p.x>camX-20);
+  } else update(dt);
+  draw(t);requestAnimationFrame(loop);
+}
+reset();spikes=[];
+requestAnimationFrame(loop);
+})();
+</script>
+
+</body></html>
