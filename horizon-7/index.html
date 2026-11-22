@@ -111,6 +111,7 @@ body.touch .keys{display:none}.tkeys{display:none}body.touch .tkeys{display:bloc
 .tb.big{width:96px;height:96px;right:calc(26px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom));border-color:rgba(255,110,80,.75)}.tb.big svg{width:40px;height:40px}
 #tbAds{right:calc(140px + env(safe-area-inset-right));bottom:calc(22px + env(safe-area-inset-bottom))}
 #tbReload{right:calc(128px + env(safe-area-inset-right));bottom:calc(104px + env(safe-area-inset-bottom))}
+#tbCenter{right:calc(214px + env(safe-area-inset-right));bottom:calc(144px + env(safe-area-inset-bottom));width:54px;height:54px}
 #tbTurn{right:calc(214px + env(safe-area-inset-right));bottom:calc(76px + env(safe-area-inset-bottom));width:54px;height:54px}
 .gsens{display:none}body.touch .gsens{display:flex;align-items:center;gap:12px;margin-top:16px;font-size:13px;letter-spacing:.2em}.gsens button{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;font-size:22px}.gsens b{font-family:Oswald,sans-serif;font-size:20px;min-width:52px;text-align:center}
 #tbJump{right:calc(44px + env(safe-area-inset-right));bottom:calc(146px + env(safe-area-inset-bottom))}
@@ -163,6 +164,7 @@ body.touch #reload{top:64%}
   <button class="tb" id="tbAds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg><span>VISER</span></button>
   <button class="tb" id="tbReload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></svg><span>RECHARGER</span></button>
   <button class="tb" id="tbTurn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v5h5"/></svg><span>180°</span></button>
+  <button class="tb" id="tbCenter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h6M15 12h6"/><circle cx="12" cy="12" r="2"/><path d="M12 4v3M12 17v3"/></svg><span>RECENTRER</span></button>
   <button class="tb" id="tbJump"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/><path d="M6 19l6-6 6 6"/></svg><span>SAUT</span></button>
   <div id="tbTop">
     <button class="tb sm" id="tbNade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="6"/><path d="M10 8V6h4v2M14 6l3-2"/></svg><b id="tbNadeN">3</b></button>
@@ -192,7 +194,7 @@ body.touch #reload{top:64%}
     <b>C</b><span>Lancer une grenade (nombre limité, caisses à ramasser)</span>
     <b>F</b><span>Lampe torche · ÉCHAP ou P : pause</span>
   </div>
-  <div class="tkeys"><b>JOYSTICK</b> à gauche pour avancer (pousse à fond pour courir) · <b>INCLINE</b> le téléphone ou <b>GLISSE</b> le doigt à droite pour viser · <b>TIR</b> en bas à droite · le bouton <b>ACTION</b> apparaît près des objectifs</div>
+  <div class="tkeys"><b>JOYSTICK</b> à gauche : haut pour avancer, gauche/droite pour tourner · <b>INCLINE</b> le téléphone ou <b>GLISSE</b> le doigt à droite pour viser · <b>TIR</b> en bas à droite · le bouton <b>ACTION</b> apparaît près des objectifs</div>
   <div class="q">QUALITÉ
     <button data-q="2">ULTRA</button><button data-q="1" class="sel">ÉLEVÉE</button><button data-q="0">FLUIDE</button>
   </div>
@@ -200,7 +202,7 @@ body.touch #reload{top:64%}
 <div class="screen hide" id="pause">
   <h1 style="font-size:64px">PAUSE</h1><h2>ÉCHAP OU P POUR METTRE EN PAUSE</h2>
   <div class="col"><button class="btn" id="resume">REPRENDRE</button><button class="btn" id="cpBtn">DERNIER POINT DE CONTRÔLE</button><button class="btn" id="restart">RECOMMENCER LA MISSION</button><button class="btn red" id="quit">QUITTER LA PARTIE</button></div>
-  <div class="gsens">SENSIBILITÉ DU GYROSCOPE <button id="gsM">−</button><b id="gsV">×2,4</b><button id="gsP">+</button></div>
+  <div class="gsens">SENSIBILITÉ DU GYROSCOPE <button id="gsM">−</button><b id="gsV">×1,6</b><button id="gsP">+</button></div>
 </div>
 <div class="screen hide" id="over">
   <h1 style="font-size:clamp(40px,7vw,84px)" id="overT"></h1><h2 id="overS"></h2>
@@ -223,7 +225,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 const $ = id => document.getElementById(id);
 // téléphone / tablette : commandes tactiles, textures et ombres allégées (#mobile force ce mode sur ordinateur)
-const IS_TOUCH = /mobile/.test(location.hash) || (matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0), TEXK = IS_TOUCH ? .5 : 1, TC = { mx: 0, mz: 0, run: false };
+const IS_TOUCH = /mobile/.test(location.hash) || (matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0), TEXK = IS_TOUCH ? .5 : 1, TC = { mx: 0, mz: 0, run: false, turn: 0 };
 const canvas = $('c');
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -1514,7 +1516,7 @@ function updatePlayer(dt) {
   const f = v1.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   let mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0), mz = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
   if (keys.ArrowLeft) player.yaw += dt * 2.2; if (keys.ArrowRight) player.yaw -= dt * 2.2;
-  mx = clamp(mx + TC.mx, -1, 1); mz = clamp(mz + TC.mz, -1, 1);
+  mx = clamp(mx + TC.mx, -1, 1); mz = clamp(mz + TC.mz, -1, 1); player.yaw -= TC.turn * dt * 2.9;
   const run = (keys.ShiftLeft || keys.ShiftRight || TC.run) && mz > 0 && !mR; const sp = (run ? 6.4 : 4.3) * (mR ? .6 : 1);
   v2.set(0, 0, 0).addScaledVector(f, mz).addScaledVector(right, mx); { const L = v2.length(); if (L > 0) v2.multiplyScalar(sp * Math.min(1, L) / L); }
   player.vel.lerp(v2, 1 - Math.exp(-(player.y > 0 ? 3 : 13) * dt)); player.pos.addScaledVector(player.vel, dt);
@@ -1671,33 +1673,34 @@ function updateAmbient(dt) {
   if (AC && state !== 'load') { ambT -= dt; if (ambT <= 0) { ambT = rr(2.5, 8); const r = rand(); r < .5 ? SFX.drip() : r < .85 ? SFX.creak() : SFX.clang(); } }
 }
 /* ---------- version mobile : joystick, visée au doigt / gyroscope, boutons ---------- */
-let _gs = 2.4; try { _gs = +localStorage.getItem('h7_gyro') || 2.4; } catch (_) { }
-const GY = { want: true, on: false, ok: false, last: 0, msgT: 0, sens: _gs };
-const TP = { joy: null, look: new Map(), sens: .0055, turn: 0 };
+let _gs = 1.6; try { _gs = +localStorage.getItem('h7_gyro2') || 1.6; } catch (_) { }
+const GY = { want: true, on: false, ok: false, msgT: 0, sens: _gs, py: null, pp: 0 };
+const TP = { joy: null, look: new Map(), sens: .0055 };
 function touchUI() { return IS_TOUCH && state === 'play'; }
 function gyroMsg(t) { const m = $('tMsg'); m.textContent = t; m.style.opacity = 1; GY.msgT = 4.5; }
 async function enableGyro() {
   if (!GY.want) return;
   try {
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      const r = await DeviceMotionEvent.requestPermission(); if (r !== 'granted') throw new Error('refus');
-    }
+    const DO = typeof DeviceOrientationEvent !== 'undefined' ? DeviceOrientationEvent : null;
+    if (DO && typeof DO.requestPermission === 'function') { const r = await DO.requestPermission(); if (r !== 'granted') throw new Error('refus'); }
   } catch (e) { GY.on = false; gyroMsg('Gyroscope refusé : glisse le doigt à droite pour viser'); syncGyroBtn(); return; }
-  GY.on = true; GY.last = 0; syncGyroBtn();
+  GY.on = true; GY.py = null; syncGyroBtn();
   setTimeout(() => { if (GY.on && !GY.ok) { GY.on = false; syncGyroBtn(); gyroMsg('Gyroscope indisponible ici : glisse le doigt à droite pour viser'); } }, 2500);
 }
 function syncGyroBtn() { $('tbGyro').classList.toggle('on', GY.on); }
-addEventListener('devicemotion', e => {
-  const r = e.rotationRate; if (!r || r.beta === null || r.beta === undefined) return; GY.ok = true;
-  const t = performance.now(), dt = GY.last ? Math.min(.05, (t - GY.last) / 1000) : 0; GY.last = t;
-  if (!GY.on || state !== 'play' || !dt) return;
-  const ang = ((screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0)) * Math.PI / 180;
-  const b = (r.beta || 0) * Math.PI / 180, g = (r.gamma || 0) * Math.PI / 180;
-  let yawR = b * Math.sin(ang) + g * Math.cos(ang), pitR = b * Math.cos(ang) - g * Math.sin(ang);
-  const dz = .03; yawR = Math.abs(yawR) < dz ? 0 : yawR - Math.sign(yawR) * dz; pitR = Math.abs(pitR) < dz ? 0 : pitR - Math.sign(pitR) * dz;
-  // gain amplifié : ~70° de rotation du téléphone = demi-tour ; les gestes rapides sont encore plus amplifiés, les lents restent précis
-  const acc = 1 + .7 * clamp((Math.abs(yawR) - 1) / 2.5, 0, 1), k = GY.sens * (1 - W.ads * .4);
-  player.yaw += yawR * dt * k * acc; player.pitch = clamp(player.pitch + pitR * dt * k * .7, -1.45, 1.45);
+// orientation réelle du téléphone (méthode standard, identique sur iPhone et Android) -> écarts de visée image par image
+const _zee = new THREE.Vector3(0, 0, 1), _eu = new THREE.Euler(), _gq0 = new THREE.Quaternion(), _gq1 = new THREE.Quaternion(-Math.sqrt(.5), 0, 0, Math.sqrt(.5)), _qc = new THREE.Quaternion(), _eo = new THREE.Euler();
+addEventListener('deviceorientation', e => {
+  if (e.beta === null || e.beta === undefined) return; GY.ok = true;
+  const D = Math.PI / 180, orient = ((screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0)) * D;
+  _eu.set(e.beta * D, (e.alpha || 0) * D, -(e.gamma || 0) * D, 'YXZ'); _qc.setFromEuler(_eu); _qc.multiply(_gq1); _qc.multiply(_gq0.setFromAxisAngle(_zee, -orient)); _eo.setFromQuaternion(_qc, 'YXZ');
+  const yaw = _eo.y, pit = _eo.x;
+  if (GY.py === null || !GY.on || state !== 'play') { GY.py = yaw; GY.pp = pit; return; }
+  let dy = yaw - GY.py; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); const dp = pit - GY.pp; GY.py = yaw; GY.pp = pit;
+  if (Math.abs(dy) > .6 || Math.abs(dp) > .6) return;                       // saut du capteur (recalage) : ignoré
+  const k = GY.sens * (1 - W.ads * .4);
+  if (Math.abs(dy) > .0005) player.yaw += dy * k;
+  if (Math.abs(dp) > .0005) player.pitch = clamp(player.pitch + dp * k * .8, -1.45, 1.45);
 });
 function lookBy(dx, dy) {
   const v = Math.abs(dx), s = TP.sens * (1 - W.ads * .5) * (1 + .8 * clamp((v - 8) / 30, 0, 1)); // glisser vite = tourner plus player.yaw -= dx * s; player.pitch = clamp(player.pitch - dy * s, -1.45, 1.45);
@@ -1719,10 +1722,11 @@ function setupTouch() {
     if (d > R) { j.x += dx * (1 - R / d) * .5; j.y += dy * (1 - R / d) * .5; joy.style.left = j.x + 'px'; joy.style.top = j.y + 'px'; dx = e.clientX - j.x; dy = e.clientY - j.y; } // la base suit le pouce
     const dd = Math.min(R, Math.hypot(dx, dy)), a = Math.atan2(dy, dx), nx = Math.cos(a) * dd / R, ny = Math.sin(a) * dd / R;
     knob.style.transform = `translate(${nx * R}px,${ny * R}px)`;
-    const dead = .12, m = Math.hypot(nx, ny), k = m < dead ? 0 : (m - dead) / (1 - dead) / (m || 1);
-    TC.mx = nx * k; TC.mz = -ny * k; TC.run = ny < -.92;
+    // haut/bas : avancer/reculer ; gauche/droite : tourner sur soi-même (plus on pousse, plus on tourne vite)
+    const dz = v => Math.abs(v) < .14 ? 0 : Math.sign(v) * (Math.abs(v) - .14) / .86;
+    const fx = dz(nx), fy = dz(ny); TC.mx = 0; TC.mz = -fy; TC.turn = Math.sign(fx) * Math.pow(Math.abs(fx), 1.5); TC.run = ny < -.92;
   });
-  const joyEnd = e => { const j = TP.joy; if (!j || j.id !== e.pointerId) return; TP.joy = null; TC.mx = TC.mz = 0; TC.run = false; joy.classList.remove('on'); };
+  const joyEnd = e => { const j = TP.joy; if (!j || j.id !== e.pointerId) return; TP.joy = null; TC.mx = TC.mz = TC.turn = 0; TC.run = false; joy.classList.remove('on'); };
   L.addEventListener('pointerup', joyEnd); L.addEventListener('pointercancel', joyEnd);
   // visée au doigt (zone droite et bouton de tir)
   const lookStart = (el, e) => { cap(el, e); TP.look.set(e.pointerId, { x: e.clientX, y: e.clientY }); };
@@ -1743,10 +1747,11 @@ function setupTouch() {
   tap('tbFlare', () => throwFlare());
   tap('tbTorch', () => { torchOn = !torchOn; SFX.click(); $('tbTorch').classList.toggle('on', torchOn); });
   tap('tbPause', () => pause());
-  tap('tbTurn', () => { if (!TP.turn) TP.turn = Math.PI; });
+  tap('tbTurn', () => { player.yaw += Math.PI; flashA = Math.max(flashA, .12); SFX.step(); });
+  tap('tbCenter', () => { player.pitch = 0; gyroMsg('Visée recentrée'); GY.msgT = 1.2; });
   const showS = () => { $('gsV').textContent = '×' + GY.sens.toFixed(1).replace('.', ','); }; showS();
-  const setS = d => { GY.sens = clamp(Math.round((GY.sens + d) * 10) / 10, 1, 5); try { localStorage.setItem('h7_gyro', GY.sens); } catch (_) { } showS(); };
-  $('gsM').addEventListener('click', () => setS(-.4)); $('gsP').addEventListener('click', () => setS(.4));
+  const setS = d => { GY.sens = clamp(Math.round((GY.sens + d) * 10) / 10, .6, 4); try { localStorage.setItem('h7_gyro2', GY.sens); } catch (_) { } showS(); };
+  $('gsM').addEventListener('click', () => setS(-.2)); $('gsP').addEventListener('click', () => setS(.2));
   tap('tbGyro', () => { GY.want = !GY.on; if (GY.want) enableGyro(); else { GY.on = false; syncGyroBtn(); gyroMsg('Gyroscope coupé : glisse le doigt à droite pour viser'); } });
   hold('tbJump', 'Space'); hold('tbAct', 'KeyE');
   // au lancement : gyroscope (doit être demandé sur un geste), plein écran, paysage
@@ -1774,9 +1779,8 @@ let tLast = performance.now();
 function touchFrame(now) {
   requestAnimationFrame(touchFrame); const dt = Math.min(.05, (now - tLast) / 1000); tLast = now;
   const on = touchUI(); $('touch').classList.toggle('hide', !on);
-  if (!on) { if (TP.joy) { TP.joy = null; TC.mx = TC.mz = 0; TC.run = false; $('joy').classList.remove('on'); } return; }
+  if (!on) { if (TP.joy) { TP.joy = null; TC.mx = TC.mz = TC.turn = 0; TC.run = false; $('joy').classList.remove('on'); } return; }
   aimAssist(dt);
-  if (TP.turn > 0) { const st = Math.min(TP.turn, dt * 11); player.yaw += st; TP.turn -= st; }
   const act = $('tbAct'), show = !!actOn; act.classList.toggle('show', show);
   if (show) { $('tbActT').textContent = actOn.label; $('tbActB').style.width = $('promptB').style.width; } else keys.KeyE = false;
   $('tbNadeN').textContent = grenN; $('tbNade').classList.toggle('off', grenN <= 0); $('tbFlareN').textContent = flareN; $('tbFlare').classList.toggle('off', flareN <= 0);
