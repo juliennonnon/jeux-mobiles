@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <title>HORIZON-7 — Mission de démolition</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0e0c0b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HORIZON-7">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;500;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
@@ -168,6 +176,18 @@ body.touch #kp{left:calc(10px + env(safe-area-inset-left));top:46%;transform:tra
 #hackP{position:absolute;left:42px;top:104px;width:min(270px,60vw);padding:10px 14px;background:rgba(5,12,10,.78);border:1px solid rgba(90,216,255,.5);font-size:11px;letter-spacing:.14em;color:#a8ecff;display:none;pointer-events:none}
 #hackP.on{display:block}#hackN{color:#5ad8ff;font-weight:700;margin-bottom:4px}#hackD{font-size:26px;letter-spacing:.35em;color:#e8fbff;text-align:center;margin:2px 0 6px;font-variant-numeric:tabular-nums}
 #hackP .hb{height:6px;background:rgba(90,216,255,.15)}#hackB{display:block;height:100%;width:0;background:#5ad8ff;box-shadow:0 0 8px #5ad8ff}#hackP .hl{display:flex;justify-content:space-between;margin-top:5px;color:#7fcfe6}
+.pres{font-size:12px;letter-spacing:.55em;color:#cfc9bc;opacity:.8;margin-bottom:6px}.pres span{color:#e0533a}
+#dHint{font-size:12px;letter-spacing:.12em;color:#b9b2a3;margin-top:8px;min-height:15px}
+#mdMenu{margin-top:18px;font-size:12px;letter-spacing:.3em;color:#ffd27a}
+.credit{margin-top:16px;font-size:12px;letter-spacing:.14em;line-height:1.8;color:#a9a293;text-align:center}.credit b{color:#e8e4da;letter-spacing:.2em}.credit a{pointer-events:auto;color:#ffd27a;text-decoration:none}
+.medals{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:min(760px,94vw);margin:12px auto 6px}
+.md{width:88px;padding:8px 4px 6px;border:1px solid rgba(255,255,255,.12);opacity:.32;text-align:center;letter-spacing:.06em}
+.md i{display:block;font-style:normal;font-size:22px;color:#8f897c}.md b{display:block;font-size:10px;margin:3px 0 2px;color:#e8e4da}.md small{display:block;font-size:8.5px;line-height:1.25;color:#a9a293}
+.md.own{opacity:.6}.md.got{opacity:1;border-color:#ffd27a;background:rgba(255,210,122,.08)}.md.got i{color:#ffd27a}.md.new{box-shadow:0 0 14px rgba(255,210,122,.55);animation:mdp 1s ease 2}.md.new small{color:#ffd27a;font-weight:700}
+@keyframes mdp{50%{transform:scale(1.12)}}.mdc{font-size:11px;letter-spacing:.3em;color:#ffd27a;margin-bottom:10px}.stats .dl{font-size:11px;letter-spacing:.3em;opacity:.7}
+#menu{justify-content:flex-start;overflow-y:auto;padding:18px 0}#menu>:first-child{margin-top:auto}#menu>:last-child{margin-bottom:auto}#menu .q{margin-top:14px}
+.by{font-size:11px;letter-spacing:.4em;color:#a9a293;margin:-4px 0 14px}.by b{color:#e8e4da}#mdMenu{margin-top:14px}.credit{margin-top:6px}
+#install{margin-top:16px;font-size:14px;padding:10px 28px}#iosHint{margin-top:14px;font-size:12px;letter-spacing:.1em;color:#ffd27a}
 </style>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}
@@ -217,8 +237,10 @@ body.touch #kp{left:calc(10px + env(safe-area-inset-left));top:46%;transform:tra
 <div class="layer" id="flash"></div>
 <div class="layer" id="fade"></div>
 <div class="screen" id="menu">
+  <div class="pres">NONAME FOUNDATION <span data-en="PRESENTS">PRÉSENTE</span></div>
   <h1>HORIZON<span>-7</span></h1>
   <h2 data-en="OPERATION DEAD LINE">OPÉRATION CHAÎNE MORTE</h2>
+  <div class="by"><span data-en="A GAME CREATED BY">UN JEU CRÉÉ PAR</span> <b>JULIEN NONNON</b></div>
   <div class="brief" data-en="&lt;b&gt;MISSION ORDERS&lt;/b&gt;Infiltrate the HORIZON-7 complex. Reach the containment sector. Plant the demolition device on the designated point. Start the countdown. Evacuate immediately."><b>ORDRE DE MISSION</b>Pénétrer dans le complexe HORIZON-7. Accéder au secteur de confinement. Installer le dispositif de démolition sur le point désigné. Activer le compte à rebours. Évacuer immédiatement.</div>
   <button class="btn" id="play" style="display:none" data-en="DEPLOY">DÉPLOIEMENT</button>
   <div id="load" data-en="LOADING…">CHARGEMENT…</div>
@@ -232,10 +254,18 @@ body.touch #kp{left:calc(10px + env(safe-area-inset-left));top:46%;transform:tra
     <b>F</b><span data-en="Flashlight · ESC or P: pause">Lampe torche · ÉCHAP ou P : pause</span>
   </div>
   <div class="tkeys" data-en="&lt;b&gt;JOYSTICK&lt;/b&gt; on the left: up to move, left/right to turn · &lt;b&gt;TILT&lt;/b&gt; the phone or &lt;b&gt;SWIPE&lt;/b&gt; on the right to aim · &lt;b&gt;FIRE&lt;/b&gt; bottom right · the &lt;b&gt;ACTION&lt;/b&gt; button appears near objectives"><b>JOYSTICK</b> à gauche : haut pour avancer, gauche/droite pour tourner · <b>INCLINE</b> le téléphone ou <b>GLISSE</b> le doigt à droite pour viser · <b>TIR</b> en bas à droite · le bouton <b>ACTION</b> apparaît près des objectifs</div>
+  <div class="q diff"><span data-en="DIFFICULTY">DIFFICULTÉ</span>
+    <button data-d="0" data-en="ROOKIE">RECRUE</button><button data-d="1" data-en="SOLDIER">SOLDAT</button><button data-d="2" data-en="NIGHTMARE">CAUCHEMAR</button>
+  </div>
+  <div id="dHint"></div>
   <div class="q"><span data-en="QUALITY">QUALITÉ</span>
     <button data-q="2">ULTRA</button><button data-q="1" class="sel" data-en="HIGH">ÉLEVÉE</button><button data-q="0" data-en="SMOOTH">FLUIDE</button>
   </div>
   <div class="q lang">LANGUE · LANGUAGE <button data-l="fr">FRANÇAIS</button><button data-l="en">ENGLISH</button></div>
+  <button class="btn" id="install" style="display:none" data-en="INSTALL THE APP">INSTALLER L'APPLI</button>
+  <div id="iosHint" style="display:none" data-en="To install it: Share button, then « Add to Home Screen »">Pour l'installer : bouton Partager, puis « Sur l'écran d'accueil »</div>
+  <div id="mdMenu"></div>
+  <div class="credit"><a href="https://juliennonnon.com" target="_blank" rel="noopener">juliennonnon.com</a> · <a href="mailto:contact@juliennonnon.com">contact@juliennonnon.com</a></div>
 </div>
 <div class="screen hide" id="pause">
   <h1 style="font-size:64px">PAUSE</h1><h2 data-en="ESC OR P TO PAUSE">ÉCHAP OU P POUR METTRE EN PAUSE</h2>
@@ -1376,6 +1406,11 @@ function bloodBurst(pt, dir, n, big) {
 /* ---------- état du jeu ---------- */
 const player = { pos: new THREE.Vector3(-23.5, 0, 0), ok: new THREE.Vector3(-23.5, 0, 0), vel: new THREE.Vector3(), yaw: -Math.PI / 2, pitch: 0, y: 0, vy: 0, hp: 100, hurtT: 99, step: 0, shake: 0, kickP: 0, kickY: 0, beat: 0 };
 const keys = {}; let state = 'load', noLock = false, mL = false, mR = false, time = 0;
+/* difficulté : 0 recrue, 1 soldat, 2 cauchemar */
+let DIFF = 1; try { const d = +localStorage.getItem('h7_diff'); if (d >= 0 && d <= 2 && localStorage.getItem('h7_diff') !== null) DIFF = d; } catch (_) { }
+const DIFFS = [{ n: .65, i: 1.45, dmg: .55, spd: .88, lv: -2, time: 190, name: ['RECRUE', 'ROOKIE'] }, { n: 1, i: 1, dmg: 1, spd: 1, lv: 0, time: 150, name: ['SOLDAT', 'SOLDIER'] }, { n: 1.35, i: .72, dmg: 1.4, spd: 1.1, lv: 2, time: 120, name: ['CAUCHEMAR', 'NIGHTMARE'] }];
+const DF = () => DIFFS[DIFF];
+const RUN = { retries: 0, nades: 0, boomK: 0 };
 let kills = 0, heads = 0, navT = 0, dmgA = 0, hitA = 0, flashA = 0;
 let torch, torchOn = true;
 const ray = new THREE.Raycaster(); ray.far = 90;
@@ -1455,7 +1490,7 @@ function enter(s, fresh) {
     if (s === 10) { exitDoors(false); setDoor('heavy', 1); setDoor('cells', 1); SFX.slam(); player.shake = 1; zoneRing.visible = false; }
     if (s === 7) zoneRing.visible = true;
   }
-  if (s === 10) timer = 150;
+  if (s === 10) timer = DF().time;
   if (S.ph !== (STEPS[prev] || {}).ph || fresh) banner(PH(S.ph).split(' — ')[0], PH(S.ph).split(' — ')[1]);
   $('objP').textContent = PH(S.ph); $('objT').textContent = L2(S.txt); $('obj').classList.remove('pop'); void $('obj').offsetWidth; $('obj').classList.add('pop');
   radio(L2(S.radio)); hud();
@@ -1469,11 +1504,29 @@ function clearRun() {
   W.ammo = MAG; W.reload = -1; W.locked = false; W.cool = 0; flareN = 3; flareT = 0; winT = -1; flashA = 0; dmgA = 0; mL = mR = false; grenN = 3; bruteDone = false; for (const g of grens) { g.t = -1; g.g.visible = false; } for (const p of PICK) { p.taken = false; p.g.visible = true; } for (const m of splats) m.visible = false; for (const m of scorch) m.visible = false;
 }
 function startReload() { if (W.reload >= 0 || W.ammo === MAG) return; W.reload = 0; W.snd = 0; }
+const MEDALS = [
+  { id: 'win', ico: '★', n: ['Démolisseur', 'Demolisher'], d: ['Terminer la mission', 'Complete the mission'], ok: w => w },
+  { id: 'first', ico: '⌖', n: ['Du premier coup', 'First Try'], d: ['Pirater la bonne porte du premier coup', 'Hack the right door on the first try'], ok: w => w && !Object.values(EXS).includes('no') },
+  { id: 'cold', ico: '◷', n: ['Sang-froid', 'Cool Head'], d: ['Finir avec plus d\'une minute restante', 'Finish with over a minute left'], ok: w => w && timer > 60 },
+  { id: 'iron', ico: '✚', n: ['Increvable', 'Unbreakable'], d: ['Finir sans reprendre un point de contrôle', 'Finish without restarting a checkpoint'], ok: w => w && RUN.retries === 0 },
+  { id: 'nonade', ico: '⊘', n: ['Sans grenade', 'No Grenades'], d: ['Finir sans lancer une seule grenade', 'Finish without throwing a grenade'], ok: w => w && RUN.nades === 0 },
+  { id: 'sniper', ico: '◎', n: ['Tireur d\'élite', 'Marksman'], d: ['10 tirs à la tête dans une partie', '10 headshots in one run'], ok: () => heads >= 10 },
+  { id: 'boom', ico: '✸', n: ['Artificier', 'Demolitions Expert'], d: ['5 infectés tués par explosion', '5 infected killed by explosions'], ok: () => RUN.boomK >= 5 },
+  { id: 'night', ico: '☠', n: ['Cauchemar', 'Nightmare'], d: ['Terminer la mission en Cauchemar', 'Complete the mission on Nightmare'], ok: w => w && DIFF === 2 },
+];
+function loadMedals() { try { return JSON.parse(localStorage.getItem('h7_medals') || '[]'); } catch (_) { return []; } }
+function medalCount() { const own = loadMedals(); return tr('MÉDAILLES ', 'MEDALS ') + MEDALS.filter(m => own.includes(m.id)).length + ' / ' + MEDALS.length; }
+function medalsHTML(win) {
+  const own = loadMedals(), got = MEDALS.filter(m => m.ok(win)), fresh = got.filter(m => !own.includes(m.id));
+  const all = [...new Set([...own, ...got.map(m => m.id)])]; try { localStorage.setItem('h7_medals', JSON.stringify(all)); } catch (_) { }
+  if (fresh.length) setTimeout(() => SFX.ok(), 500);
+  return '<div class="medals">' + MEDALS.map(m => { const g = got.includes(m), o = all.includes(m.id), nw = fresh.includes(m); return `<div class="md ${g ? 'got' : o ? 'own' : ''}${nw ? ' new' : ''}" title="${L2(m.d)}"><i>${m.ico}</i><b>${L2(m.n)}</b><small>${nw ? tr('NOUVELLE !', 'NEW!') : L2(m.d)}</small></div>`; }).join('') + '</div><div class="mdc">' + medalCount() + '</div>';
+}
 function endScreen(kind) {
   const el = $('over'), T = { dead: [tr('TU ES <span>MORT</span>', 'YOU ARE <span>DEAD</span>'), tr("LES INFECTÉS T'ONT EU", 'THE INFECTED GOT YOU')], boom: [tr('MISSION <span>ÉCHOUÉE</span>', 'MISSION <span>FAILED</span>'), tr("LA CHARGE A EXPLOSÉ ALORS QUE TU ÉTAIS ENCORE DANS L'USINE", 'THE CHARGE WENT OFF WHILE YOU WERE STILL INSIDE THE FACTORY')], win: [tr('MISSION <span>ACCOMPLIE</span>', 'MISSION <span>ACCOMPLISHED</span>'), tr('HORIZON-7 EST DÉTRUIT — TU ES EN ZONE DE SÉCURITÉ', 'HORIZON-7 IS DESTROYED — YOU MADE IT TO THE SAFE ZONE')] }[kind];
   $('overT').innerHTML = T[0]; $('overS').textContent = T[1]; $('retry').style.display = kind === 'win' ? 'none' : '';
   const m = Math.floor(timer / 60), sc = Math.floor(timer % 60);
-  $('stats').innerHTML = (kind === 'win' ? `${tr('TEMPS RESTANT', 'TIME LEFT')} <b>${m}:${String(sc).padStart(2, '0')}</b><br>` : `${PH(STEPS[step].ph)}<br>`) + `${tr('INFECTÉS NEUTRALISÉS', 'INFECTED KILLED')} <b>${kills}</b> · ${tr('TIRS À LA TÊTE', 'HEADSHOTS')} <b>${heads}</b>`;
+  $('stats').innerHTML = (kind === 'win' ? `${tr('TEMPS RESTANT', 'TIME LEFT')} <b>${m}:${String(sc).padStart(2, '0')}</b><br>` : `${PH(STEPS[step].ph)}<br>`) + `${tr('INFECTÉS NEUTRALISÉS', 'INFECTED KILLED')} <b>${kills}</b> · ${tr('TIRS À LA TÊTE', 'HEADSHOTS')} <b>${heads}</b><br><small class="dl">${tr('DIFFICULTÉ', 'DIFFICULTY')} · ${L2(DF().name)}</small>` + medalsHTML(kind === 'win');
   el.classList.remove('hide'); $('hud').classList.remove('on'); if (document.exitPointerLock) document.exitPointerLock();
 }
 function hurt(d) {
@@ -1485,7 +1538,7 @@ function killZombie(z, dir, head, boom) {
   z.rx0 = z.root.rotation.x;
   z.state = 'dead'; z.t = 0; z.gy = heightAt(z.pos.x, z.pos.z); z.fall = (dir.x * Math.sin(z.yaw) + dir.z * Math.cos(z.yaw)) > 0 ? 1 : -1; z.pool = false;
   for (const h of z.hit) { const i = zHit.indexOf(h); if (i >= 0) zHit.splice(i, 1); }
-  kills++; if (head) heads++; feed(z.brute ? tr('BRUTE ABATTUE', 'BRUTE DOWN') : boom ? tr('PULVÉRISÉ', 'OBLITERATED') : head ? tr('TIR À LA TÊTE', 'HEADSHOT') : tr('NEUTRALISÉ', 'KILLED'), head || z.brute); z.jawT = 1;
+  kills++; if (head) heads++; if (boom) RUN.boomK++; feed(z.brute ? tr('BRUTE ABATTUE', 'BRUTE DOWN') : boom ? tr('PULVÉRISÉ', 'OBLITERATED') : head ? tr('TIR À LA TÊTE', 'HEADSHOT') : tr('NEUTRALISÉ', 'KILLED'), head || z.brute); z.jawT = 1;
   const s = panOf(z.pos); SFX.die(s.pan, s.vol); hitA = 1; $('hit').className = 'kill'; hud();
 }
 function fire() {
@@ -1558,7 +1611,7 @@ function buildGrenades() {
   for (let i = 0; i < 2; i++) { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(.05, 12, 10), m); b.scale.y = 1.25; b.castShadow = true; g.add(b); const c = new THREE.Mesh(new THREE.CylinderGeometry(.018, .022, .04, 8), M.black); c.position.y = .075; g.add(c); g.visible = false; scene.add(g); grens.push({ g, v: new THREE.Vector3(), t: -1 }); }
 }
 function throwGrenade() {
-  if (grenN <= 0 || state !== 'play') return; const f = grens[grenI++ % 2]; if (f.t >= 0) { grenI--; return; } grenN--; camera.getWorldDirection(fwd);
+  if (grenN <= 0 || state !== 'play') return; const f = grens[grenI++ % 2]; if (f.t >= 0) { grenI--; return; } grenN--; RUN.nades++; camera.getWorldDirection(fwd);
   f.g.visible = true; f.t = 2.3; f.g.position.copy(camera.position).addScaledVector(fwd, .5).addScaledVector(UP, -.12); f.v.copy(fwd).multiplyScalar(10.5).addScaledVector(UP, 3.2).add(player.vel); SFX.pin(); W.kickV -= .4; hud();
 }
 function explode(p) {
@@ -1651,7 +1704,7 @@ function updateZombies(dt) {
     let moving = false, tyaw = Math.atan2(dx, dz);
     if (z.state === 'attack') {
       z.t += dt; z.vel.multiplyScalar(Math.exp(-8 * dt));
-      if (!z.hitDone && z.t > .42) { z.hitDone = true; if (d < (z.brute ? 2.5 : 1.95)) hurt(z.brute ? 32 : z.runner ? 13 : 17); }
+      if (!z.hitDone && z.t > .42) { z.hitDone = true; if (d < (z.brute ? 2.5 : 1.95)) hurt((z.brute ? 32 : z.runner ? 13 : 17) * DF().dmg); }
       if (z.t > .9) z.state = 'walk';
     } else if (d < (z.brute ? 1.75 : 1.3)) { z.state = 'attack'; z.t = 0; z.hitDone = false; const s = panOf(z.pos); SFX.groan(s.pan, 1.6, !z.brute); }
     else {
@@ -1701,10 +1754,10 @@ function updateMission(dt) {
   else { pr.style.opacity = 0; actP = 0; }
   // apparition des infectés
   const alive = zombies.reduce((n, z) => n + (z.state !== 'dead' ? 1 : 0), 0); spawnT -= dt;
-  if (spawnT <= 0 && alive < S.max) {
+  if (spawnT <= 0 && alive < Math.max(1, Math.round(S.max * DF().n))) {
     let c = S.sp.map(i => SP[i]).filter(s => dist2(s[0], s[1]) > 7 && !(step >= 10 && ((s === SP[2] && exitK !== 'west') || (s === SP[1] && exitK !== 'south'))));
     if (step >= 10) { c = c.filter(s => dist2(s[0], s[1]) < 26); const amb = ambushPoint(); if (amb && (!c.length || rand() < .45)) c = [amb]; } // évacuation : apparitions près du joueur, hors de sa vue
-    if (c.length) { spawnZombie(S.lvl, pick(c)); spawnT = S.int * rr(.7, 1.3) * (step === 6 && doorP > .6 ? .75 : 1) * (step >= 10 && alive < 2 ? .6 : 1); }
+    if (c.length) { const nz = spawnZombie(Math.max(0, S.lvl + DF().lv), pick(c)); nz.speed *= DF().spd; spawnT = S.int * DF().i * rr(.7, 1.3) * (step === 6 && doorP > .6 ? .75 : 1) * (step >= 10 && alive < 2 ? .6 : 1); }
   }
   if (step >= 10) for (const z of zombies) { if (z.state === 'dead') continue; z.far = dist2(z.pos.x, z.pos.z) > 30 ? (z.far || 0) + dt : 0; if (z.far > 3) despawn(z); } // trop loin : il réapparaîtra plus près
   if (!bruteDone && ((step === 6 && doorP > .5) || (step === 10 && tPhase > 1.4))) { bruteDone = true; const b = spawnZombie(S.lvl, step === 6 ? SP[1] : SP[3], true); if (step === 10) { b.pos.set(21.6, UY, 30); radio(tr('Contact massif en approche derrière vous. Ne restez pas là !', 'Heavy contact closing in behind you. Get out of there!')); } }
@@ -2073,15 +2126,30 @@ function applyLang(l) {
   document.querySelectorAll('[data-en]').forEach(e => { if (e.dataset.fr === undefined) e.dataset.fr = e.innerHTML; e.innerHTML = l === 'en' ? e.dataset.en : e.dataset.fr; });
   document.querySelectorAll('.lang button').forEach(b => b.classList.toggle('sel', b.dataset.l === l));
   for (const f of SIGNS) f();
+  if ($('dHint')) diffHint();
   if (typeof GY !== 'undefined' && $('gsV')) $('gsV').textContent = '×' + GY.sens.toFixed(1).replace('.', tr(',', '.'));
 }
 /* ---------- entrées ---------- */
 function lock() { if (IS_TOUCH) { noLock = true; return; } try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { noLock = true; }); } catch (e) { noLock = true; } }
+function diffHint() { $('dHint').textContent = [tr('Moins d\'infectés, plus lents · 3 min 10 pour évacuer', 'Fewer, slower infected · 3:10 to evacuate'), tr('L\'expérience prévue · 2 min 30 pour évacuer', 'The intended experience · 2:30 to evacuate'), tr('Plus nombreux, plus rapides, plus durs · 2 min pour évacuer', 'More, faster, harder-hitting infected · 2:00 to evacuate')][DIFF]; $('mdMenu').textContent = medalCount(); }
+/* appli installable */
+const STANDALONE = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone;
+let instEv = null;
+if ('serviceWorker' in navigator && location.protocol === 'https:' && /github\.io$/.test(location.hostname)) navigator.serviceWorker.register('sw.js').then(() => setTimeout(() => {
+  // met en cache three.js et les fichiers déjà chargés, pour jouer hors ligne
+  try { const u = performance.getEntriesByType('resource').map(e => e.name).filter(n => /jsdelivr\.net|fonts\.(googleapis|gstatic)\.com/.test(n) || n.startsWith(location.origin)); caches.open('h7-v1').then(c => Promise.all(u.map(x => c.match(x).then(m => m || c.add(x).catch(() => { }))))); } catch (_) { }
+}, 4000)).catch(() => { });
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); instEv = e; if (!STANDALONE) $('install').style.display = ''; });
+$('install').addEventListener('click', async () => { if (!instEv) return; instEv.prompt(); try { await instEv.userChoice; } catch (_) { } instEv = null; $('install').style.display = 'none'; });
+addEventListener('appinstalled', () => { $('install').style.display = 'none'; });
+if (!STANDALONE && /iPhone|iPad|iPod/.test(navigator.userAgent) && /github\.io$/.test(location.hostname)) $('iosHint').style.display = '';
+function setDiff(d) { DIFF = d; try { localStorage.setItem('h7_diff', d); } catch (_) { } document.querySelectorAll('button[data-d]').forEach(b => b.classList.toggle('sel', +b.dataset.d === d)); diffHint(); }
+document.querySelectorAll('button[data-d]').forEach(b => b.addEventListener('click', () => setDiff(+b.dataset.d))); setDiff(DIFF);
 function begin(s) { initAudio(); clearRun(); state = 'play'; ['menu', 'over', 'pause'].forEach(i => $(i).classList.add('hide')); $('hud').classList.add('on'); gunPivot.visible = true; camera.rotation.z = 0; enter(s, true); lock(); }
-function startGame() { kills = 0; heads = 0; begin(1); }
+function startGame() { kills = 0; heads = 0; RUN.retries = 0; RUN.nades = 0; RUN.boomK = 0; begin(1); }
 function pause() { if (state !== 'play') return; closeKP(); state = 'pause'; mL = mR = false; for (const k in keys) keys[k] = false; $('dmg').style.opacity = 0; $('pause').classList.remove('hide'); }
 function resume() { if (state !== 'pause') return; state = 'play'; $('pause').classList.add('hide'); initAudio(); lock(); }
-function quitToMenu() { state = 'menu'; mL = mR = false; for (const k in keys) keys[k] = false; clearRun(); step = 0; setWorld(1); gunPivot.visible = false; camera.rotation.z = 0; camera.fov = 72; camera.updateProjectionMatrix(); ['pause', 'over'].forEach(i => $(i).classList.add('hide')); $('hud').classList.remove('on'); $('menu').classList.remove('hide'); $('dmg').style.opacity = 0; if (document.exitPointerLock) document.exitPointerLock(); }
+function quitToMenu() { diffHint(); state = 'menu'; mL = mR = false; for (const k in keys) keys[k] = false; clearRun(); step = 0; setWorld(1); gunPivot.visible = false; camera.rotation.z = 0; camera.fov = 72; camera.updateProjectionMatrix(); ['pause', 'over'].forEach(i => $(i).classList.add('hide')); $('hud').classList.remove('on'); $('menu').classList.remove('hide'); $('dmg').style.opacity = 0; if (document.exitPointerLock) document.exitPointerLock(); }
 document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement !== canvas && state === 'play' && !noLock && !KP.open) pause(); });
 document.addEventListener('pointerlockerror', () => { noLock = true; });
 addEventListener('keydown', e => {
@@ -2109,7 +2177,7 @@ canvas.addEventListener('mousedown', e => { if (state !== 'play') return; if (do
 addEventListener('mouseup', e => { if (e.button === 0) mL = false; if (e.button === 2) mR = false; });
 addEventListener('contextmenu', e => e.preventDefault());
 $('play').addEventListener('click', startGame); $('resume').addEventListener('click', resume); $('restart').addEventListener('click', startGame); $('restart2').addEventListener('click', startGame);
-$('retry').addEventListener('click', () => begin(cp)); $('cpBtn').addEventListener('click', () => begin(cp)); $('quit').addEventListener('click', quitToMenu); $('quit2').addEventListener('click', quitToMenu);
+$('retry').addEventListener('click', () => { RUN.retries++; begin(cp); }); $('cpBtn').addEventListener('click', () => { RUN.retries++; begin(cp); }); $('quit').addEventListener('click', quitToMenu); $('quit2').addEventListener('click', quitToMenu);
 document.querySelectorAll('button[data-q]').forEach(b => b.addEventListener('click', () => setQuality(+b.dataset.q)));
 
 /* ---------- boucle ---------- */
@@ -2153,7 +2221,7 @@ async function init() {
   const warm = []; for (let i = 0; i < 10; i++) { const z = makeZombie(i === 9); z.root.position.set(-12 + i * 2.6, 0, -3); scene.add(z.root); warm.push(z.root); }
   camera.position.set(0, 2, 9); camera.lookAt(0, 2, -6); composer.render(.016); for (const r of warm) scene.remove(r);
   state = 'menu'; $('load').style.display = 'none'; $('play').style.display = ''; $('fade').style.opacity = 0;
-  window.__g = { start() { noLock = true; startGame(); }, go(s) { noLock = true; begin(s); }, player, camera, zombies, W, keys, DOOR, fire, throwFlare, throwGrenade, spawn: (b, x, z) => { const q = spawnZombie(3, [x, z], b); return q; }, nade: () => grenN, kpPress, startCine, cineT: () => CINE.t, MZ, sever, limbHit, gibs, ads: v => { mR = v; }, dbgGun(x, y, z, ry) { if (window.__dg) scene.remove(window.__dg); const c = gun.clone(true); c.scale.setScalar(1); c.position.set(x, y, z); c.rotation.set(0, ry || 0, 0); c.traverse(o => { o.frustumCulled = true; }); scene.add(c); window.__dg = c; gunPivot.visible = false; $('hud').style.display = 'none'; torchOn = false; const dl = new THREE.PointLight(0xffffff, 3, 6, 1.5); dl.position.set(x + 1, y + 1.2, z + 1.5); scene.add(dl); const dl2 = new THREE.PointLight(0xffffff, 3, 6, 1.5); dl2.position.set(x - 1, y + .2, z - 1); scene.add(dl2); }, info: () => ({ exit: exitK, code: exitCode, exs: JSON.stringify(EXS), kp: KP.open, barrels: BARRELS.filter(b => b.alive).length, state, step, cp, power, timer: Math.round(timer), doorP: +doorP.toFixed(2), hp: Math.round(player.hp), z: zombies.filter(z => z.state !== 'dead').length, kills, pos: [+player.pos.x.toFixed(1), +player.pos.z.toFixed(1)], winT }), setQ: setQuality, step(n) { for (let i = 0; i < n; i++) { tick(.033, .016); scene.updateMatrixWorld(); } } };
+  window.__g = { endScreen, RUN,  start() { noLock = true; startGame(); }, go(s) { noLock = true; begin(s); }, player, camera, zombies, W, keys, DOOR, fire, throwFlare, throwGrenade, spawn: (b, x, z) => { const q = spawnZombie(3, [x, z], b); return q; }, nade: () => grenN, kpPress, startCine, cineT: () => CINE.t, MZ, sever, limbHit, gibs, ads: v => { mR = v; }, dbgGun(x, y, z, ry) { if (window.__dg) scene.remove(window.__dg); const c = gun.clone(true); c.scale.setScalar(1); c.position.set(x, y, z); c.rotation.set(0, ry || 0, 0); c.traverse(o => { o.frustumCulled = true; }); scene.add(c); window.__dg = c; gunPivot.visible = false; $('hud').style.display = 'none'; torchOn = false; const dl = new THREE.PointLight(0xffffff, 3, 6, 1.5); dl.position.set(x + 1, y + 1.2, z + 1.5); scene.add(dl); const dl2 = new THREE.PointLight(0xffffff, 3, 6, 1.5); dl2.position.set(x - 1, y + .2, z - 1); scene.add(dl2); }, info: () => ({ exit: exitK, code: exitCode, exs: JSON.stringify(EXS), kp: KP.open, barrels: BARRELS.filter(b => b.alive).length, state, step, cp, power, timer: Math.round(timer), doorP: +doorP.toFixed(2), hp: Math.round(player.hp), z: zombies.filter(z => z.state !== 'dead').length, kills, pos: [+player.pos.x.toFixed(1), +player.pos.z.toFixed(1)], winT }), setQ: setQuality, step(n) { for (let i = 0; i < n; i++) { tick(.033, .016); scene.updateMatrixWorld(); } } };
   requestAnimationFrame(frame);
 }
 init().catch(e => { $('load').textContent = tr('ERREUR : ', 'ERROR: ') + e.message; console.error(e); });

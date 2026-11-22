@@ -1,0 +1,17 @@
+{
+  "name": "HORIZON-7 — Mission de démolition",
+  "short_name": "HORIZON-7",
+  "description": "FPS zombies dans une usine désaffectée · Noname Foundation · un jeu créé par Julien Nonnon",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0e0c0b",
+  "theme_color": "#0e0c0b",
+  "lang": "fr",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
