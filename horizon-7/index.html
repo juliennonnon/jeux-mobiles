@@ -162,6 +162,12 @@ body.touch #kp{left:calc(10px + env(safe-area-inset-left));top:46%;transform:tra
 #hackR{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.9);font-size:clamp(34px,7vw,72px);letter-spacing:.25em;font-weight:700;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:30;text-shadow:0 0 24px currentColor}
 #hackR.on{opacity:1;transform:translate(-50%,-50%) scale(1)}#hackR.ok{color:#5dff8a}#hackR.bad{color:#ff4a3a}
 .contact{margin:6px 0 18px;font-size:15px;letter-spacing:.08em;line-height:1.9;color:#cfc9bc;text-align:center}.contact a{pointer-events:auto;color:#ffd27a;text-decoration:none;border-bottom:1px solid rgba(255,210,122,.4)}
+.xm{position:absolute;transform:translate(-50%,-50%);text-align:center;font-size:11px;letter-spacing:.12em;text-shadow:0 1px 4px #000;display:none;white-space:nowrap;pointer-events:none}
+.xm b{display:block;margin:0 auto 3px;min-width:22px;width:max-content;padding:2px 5px;border:2px solid #ffb43a;color:#ffb43a;font-size:12px;background:rgba(0,0,0,.45)}
+.xm.unk span{color:#ffd9a0}.xm.no{opacity:.55}.xm.no b{border-color:#ff4a3a;color:#ff4a3a}.xm.no span{color:#ff8a7a}.xm.hack b{border-color:#5ad8ff;color:#5ad8ff}.xm.hack span{color:#a8ecff}
+#hackP{position:absolute;left:42px;top:104px;width:min(270px,60vw);padding:10px 14px;background:rgba(5,12,10,.78);border:1px solid rgba(90,216,255,.5);font-size:11px;letter-spacing:.14em;color:#a8ecff;display:none;pointer-events:none}
+#hackP.on{display:block}#hackN{color:#5ad8ff;font-weight:700;margin-bottom:4px}#hackD{font-size:26px;letter-spacing:.35em;color:#e8fbff;text-align:center;margin:2px 0 6px;font-variant-numeric:tabular-nums}
+#hackP .hb{height:6px;background:rgba(90,216,255,.15)}#hackB{display:block;height:100%;width:0;background:#5ad8ff;box-shadow:0 0 8px #5ad8ff}#hackP .hl{display:flex;justify-content:space-between;margin-top:5px;color:#7fcfe6}
 </style>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}
@@ -177,6 +183,8 @@ body.touch #kp{left:calc(10px + env(safe-area-inset-left));top:46%;transform:tra
   <div id="top"><div class="w" id="topT"></div><div class="tb" id="topBar"><i id="topB"></i></div><div class="z" id="topS"></div></div>
   <div id="obj"><div class="p" id="objP"></div><div class="t" id="objT"></div></div>
   <div id="wp"><i></i><span id="wpD"></span></div>
+  <div class="xm" id="xm_quai"><b></b><span></span></div><div class="xm" id="xm_west"><b></b><span></span></div><div class="xm" id="xm_south"><b></b><span></span></div>
+  <div id="hackP"><div id="hackN"></div><div id="hackD">0 0 0 0</div><div class="hb"><i id="hackB"></i></div><div class="hl"><span id="hackL"></span><span id="hackPc">0%</span></div></div>
   <div id="prompt"><span class="k">E</span><span id="promptT"></span><div class="bar"><i id="promptB"></i></div></div>
   <div id="radio"></div>
   <div id="score"><div class="s" id="scoreTxt">0</div><div class="k" data-en="INFECTED KILLED">INFECTÉS NEUTRALISÉS</div></div>
@@ -1396,9 +1404,9 @@ const ACTS = [
   { step: 4, x: 32.3, z: 2.6, r: 2.2, hold: 1.6, label: ["Réinitialiser le tableau", "Reset the panel"], done: () => enter(5) },
   { step: 8, x: 10, z: 29.9, r: 2.3, hold: 4.5, label: ["Poser la charge de démolition", "Plant the demolition charge"], done: () => enter(9) },
   { step: 9, x: 10, z: 29.9, r: 2.3, hold: 2, label: ["Armer le dispositif", "Arm the device"], done: () => enter(10) },
-  { steps: [10, 11], key: 'quai', x: 10.1, z: -12.2, r: 2.4, hold: 2, hack: true, label: ["Pirater la porte", "Hack the door"], done: () => hackDoor('quai') },
-  { steps: [10, 11], key: 'west', x: -19, z: 2.75, r: 2.4, hold: 2, hack: true, label: ["Pirater la porte", "Hack the door"], done: () => hackDoor('west') },
-  { steps: [10, 11], key: 'south', x: -13.9, z: 12.2, r: 2.4, hold: 2, hack: true, label: ["Pirater la porte", "Hack the door"], done: () => hackDoor('south') }
+  { steps: [10, 11], key: 'quai', x: 10.1, z: -12.2, r: 2.4, hold: 2, hack: true, label: ["Lancer le piratage", "Start the hack"], done: () => startHack('quai') },
+  { steps: [10, 11], key: 'west', x: -19, z: 2.75, r: 2.4, hold: 2, hack: true, label: ["Lancer le piratage", "Start the hack"], done: () => startHack('west') },
+  { steps: [10, 11], key: 'south', x: -13.9, z: 12.2, r: 2.4, hold: 2, hack: true, label: ["Lancer le piratage", "Start the hack"], done: () => startHack('south') }
 ];
 let step = 0, cp = 1, power = false, genOn = false, emergency = false, doorP = 0, timer = 0, tPhase = 0, spawnT = 0, actP = 0, actOn = null, bangT = 2, sirenT = 0, alarmT = 0, radioT = 0, beepT = 0, runT = 0, powerK = 0, winT = -1;
 const dist2 = (x, z) => Math.hypot(player.pos.x - x, player.pos.z - z);
@@ -1453,6 +1461,7 @@ function enter(s, fresh) {
   radio(L2(S.radio)); hud();
 }
 function clearRun() {
+  if (typeof stopHack === 'function') { stopHack(); hackT = 0; $('hackR').className = ''; }
   resetBarrels();
   for (const z of zombies) scene.remove(z.root); zombies.length = 0; zHit.length = 0; for (const g of gibs) scene.remove(g.piv); gibs.length = 0;
   for (const b of bloods) b.m.visible = false; for (const h of holes) h.visible = false; for (const f of flares) { f.t = -1; f.g.visible = false; f.L.intensity = 0; }
@@ -1686,9 +1695,9 @@ function updateMission(dt) {
   // interactions (maintenir E)
   updateHack(dt);
   if (KP.open && !KP.lock) { const a = ACTS.find(q => q.key === KP.door); if (a && dist2(a.x, a.z) > 3.6) closeKP(); }   // trop loin de la porte : le digicode se referme (les chiffres tapés restent)
-  actOn = null; for (const a of ACTS) if ((a.step === step || (a.steps && a.steps.includes(step) && EXS[a.key] === 'unk' && !KP.open)) && dist2(a.x, a.z) < a.r) actOn = a;
+  actOn = null; for (const a of ACTS) if ((a.step === step || (a.steps && a.steps.includes(step) && EXS[a.key] === 'unk' && !KP.open && !HACK.k)) && dist2(a.x, a.z) < a.r) actOn = a;
   const pr = $('prompt');
-  if (actOn) { pr.style.opacity = 1; $('promptT').textContent = actOn.hack && actP > 0 ? tr('PIRATAGE', 'HACKING') + ' ' + Array.from({ length: 4 }, (_, i) => actP > (i + 1) * .22 ? exitCode[i] : Math.floor(rand() * 10)).join(' ') + ' · ' + Math.floor(actP * 100) + '%' : L2(actOn.label); if (keys.KeyE) { if (actP === 0 && actOn.start) actOn.start(); actP += dt / actOn.hold; beepT -= dt; if (step >= 8 && beepT <= 0) { beepT = .35; SFX.beep(); } if (actP >= 1) { const a = actOn; actP = 0; actOn = null; a.done(); } } else actP = Math.max(0, actP - dt * 1.5); $('promptB').style.width = (actP * 100) + '%'; }
+  if (actOn) { pr.style.opacity = 1; $('promptT').textContent = actOn.hack && actP > 0 ? tr('CONNEXION AU BOÎTIER… ', 'CONNECTING TO THE PANEL… ') + Math.floor(actP * 100) + '%' : L2(actOn.label); if (keys.KeyE) { if (actP === 0 && actOn.start) actOn.start(); actP += dt / actOn.hold; beepT -= dt; if (step >= 8 && beepT <= 0) { beepT = .35; SFX.beep(); } if (actP >= 1) { const a = actOn; actP = 0; actOn = null; a.done(); } } else actP = Math.max(0, actP - dt * 1.5); $('promptB').style.width = (actP * 100) + '%'; }
   else { pr.style.opacity = 0; actP = 0; }
   // apparition des infectés
   const alive = zombies.reduce((n, z) => n + (z.state !== 'dead' ? 1 : 0), 0); spawnT -= dt;
@@ -1711,6 +1720,7 @@ function updateMission(dt) {
     if (behind) { x = -x; y = -y; } if (behind || Math.abs(x) > .92 || Math.abs(y) > .86) { const k = Math.max(Math.abs(x) / .92, Math.abs(y) / .86, 1e-3); x /= k; y /= k; if (behind && Math.abs(x) < .92 && Math.abs(y) < .86) { const kk = Math.min(.92 / Math.abs(x || 1e-3), .86 / Math.abs(y || 1e-3)); x *= kk; y *= kk; } }
     w.style.display = ''; w.style.left = ((x * .5 + .5) * 100) + '%'; w.style.top = ((-y * .5 + .5) * 100) + '%'; $('wpD').textContent = Math.round(d) + ' m';
   } else w.style.display = 'none';
+  updateExitMarks();
   if (radioT > 0) { radioT -= dt; if (radioT <= 0) $('radio').style.opacity = 0; }
 }
 function updateAmbient(dt) {
@@ -1737,7 +1747,7 @@ function updateAmbient(dt) {
   if (LP.mach) { const dH = Math.hypot(camera.position.x, camera.position.z); LP.mach.value = lerp(LP.mach.value, powerK > .5 ? .2 / (1 + Math.max(0, dH - 14) * .12) : 0, .05); LP.gen.value = lerp(LP.gen.value, genOn ? .16 / (1 + Math.hypot(camera.position.x - 31, camera.position.z + 3.3) * .1) : 0, .05); }
   updateDoors(dt); updateBarrels(dt);
   for (const k in EXL) { const e = EXL[k], st = EXS[k] || 'unk'; if (!emergency) { e.L.intensity = 0; e.m.color.setRGB(.03, .03, .03); continue; }
-    const c = st === 'ok' ? [.2, 1, .35] : st === 'no' ? [1, .08, .04] : [1, .5, .05], f = st === 'ok' ? (Math.sin(time * 6) > -.2 ? 1 : .15) : st === 'unk' ? .55 + .45 * Math.sin(time * 2.5) : 1;
+    const c = st === 'ok' ? [.2, 1, .35] : st === 'no' ? [1, .08, .04] : [1, .5, .05], f = st === 'ok' ? (Math.sin(time * 6) > -.2 ? 1 : .15) : st === 'unk' ? .55 + .45 * Math.sin(time * 2.5) : st === 'hack' ? (Math.sin(time * 14) > 0 ? 1 : .2) : 1;
     e.L.color.setRGB(c[0], c[1], c[2]); e.L.intensity = (st === 'ok' ? 14 : 6) * f; e.m.color.setRGB(c[0] * 5 * f, c[1] * 5 * f, c[2] * 5 * f); }
   { const u = dust.material.uniforms; u.uTime.value = time; u.uScale.value = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360)); u.uTorch.value = torch ? torch.intensity / 42 : 0; u.uCam.value.copy(camera.position); camera.getWorldDirection(u.uDir.value); }
   steamT -= dt; if (steamT <= 0) { steamT = .05; for (const e of STEAM) if (Math.hypot(e[0] - camera.position.x, e[2] - camera.position.z) < 26) smoke.emit(e[0], e[1], e[2], e[3] + rr(-.25, .25), e[4] + rr(-.2, .2), e[5] + rr(-.25, .25), rr(1.1, 1.9), rr(.1, .18), .62, .64, .66, .11, -.9, 4.5); }
@@ -1810,9 +1820,27 @@ function setupKP() {
   $('kpX').addEventListener('pointerdown', e => { e.stopPropagation(); kpPress('X'); });
 }
 
-/* ---------- piratage des portes de sortie (maintenir E) ---------- */
-let hackT = 0;
-function hackFlash(t, ok) { const h = $('hackR'); h.textContent = t; h.className = 'on ' + (ok ? 'ok' : 'bad'); hackT = 2.2; }
+/* ---------- piratage des portes de sortie : 2 s pour se connecter, puis 10 s de calcul ---------- */
+const HACK = { k: null, t: 0, dur: 10, beep: 0 }; let hackT = 0;
+const XNAME = { quai: ['QUAI 2', 'DOCK 2'], west: ['ENTRÉE OUEST', 'WEST ENTRANCE'], south: ['ISSUE SUD', 'SOUTH EXIT'] };
+const HACK_LOG = [['Connexion au boîtier', 'Linking to the panel'], ['Lecture du firmware', 'Reading firmware'], ['Contournement du verrou', 'Bypassing the lock'], ['Décodage de la combinaison', 'Cracking the combination'], ['Test du moteur de porte', 'Testing the door motor']];
+function hackFlash(t, ok) { const h = $('hackR'); h.textContent = t; h.className = 'on ' + (ok ? 'ok' : 'bad'); hackT = 2.4; }
+function startHack(k) {
+  HACK.k = k; HACK.t = 0; HACK.beep = 0; EXS[k] = 'hack'; SFX.beep();
+  $('hackN').textContent = tr('PIRATAGE · ', 'HACKING · ') + L2(XNAME[k]); $('hackP').classList.add('on');
+  radio(tr('Piratage lancé. Ça prend une dizaine de secondes : couvrez-vous !', 'Hack started. It takes about ten seconds: cover yourself!'));
+}
+function stopHack() { HACK.k = null; $('hackP').classList.remove('on'); }
+function updateHack(dt) {
+  if (hackT > 0) { hackT -= dt; if (hackT <= 0) $('hackR').className = ''; }
+  if (!HACK.k) return;
+  HACK.t += dt; const f = Math.min(1, HACK.t / HACK.dur);
+  $('hackB').style.width = (f * 100) + '%'; $('hackPc').textContent = Math.floor(f * 100) + '%';
+  $('hackD').textContent = Array.from({ length: 4 }, (_, i) => f > .25 + i * .17 ? exitCode[i] : Math.floor(rand() * 10)).join(' ');
+  $('hackL').textContent = L2(HACK_LOG[Math.min(HACK_LOG.length - 1, Math.floor(f * HACK_LOG.length))]) + '…';
+  HACK.beep -= dt; if (HACK.beep <= 0) { HACK.beep = .18; tn(rr(900, 1800), .04, { type: 'square', g: .03, lp: 3000 }); }
+  if (f >= 1) { const k = HACK.k; stopHack(); hackDoor(k); }
+}
 function hackDoor(k) {
   if (k === exitK) {
     hackFlash(tr('OUVERT', 'OPEN'), true); SFX.ok(); EXS[k] = 'ok'; exitOpen = true; setDoor(k, 1); setTimeout(() => SFX.slam(), 300);
@@ -1822,7 +1850,20 @@ function hackDoor(k) {
     radio(tr('Verrouillé ! Cette porte est grillée. Essayez une autre sortie !', 'Locked! This door is fried. Try another exit!'));
   }
 }
-function updateHack(dt) { if (hackT > 0) { hackT -= dt; if (hackT <= 0) $('hackR').className = ''; } }
+/* repères des sorties (phase 4) : distance + état */
+function projMark(el, X, Y, Z, off) {
+  v1.set(X, Y, Z); const d = v1.distanceTo(camera.position); v1.project(camera); let x = v1.x, y = v1.y; const behind = v1.z > 1, LX = .74, LY = .72; let edge = 0;
+  if (behind) { x = -x; y = -y; } if (behind || Math.abs(x) > LX || Math.abs(y) > LY) { const k = Math.max(Math.abs(x) / LX, Math.abs(y) / LY, 1e-3); x /= k; y /= k; if (behind && Math.abs(x) < LX && Math.abs(y) < LY) { const kk = Math.min(LX / Math.abs(x || 1e-3), LY / Math.abs(y || 1e-3)); x *= kk; y *= kk; } edge = x < 0 ? -1 : 1; }
+  el.style.display = 'block'; el.style.left = ((x * .5 + .5) * 100) + '%'; el.style.top = 'calc(' + ((-y * .5 + .5) * 100) + '% + ' + (edge ? off : 0) + 'px)'; return [d, edge];
+}
+function updateExitMarks() {
+  const show = step >= 10 && winT < 0 && state === 'play';
+  for (const a of ACTS) { if (!a.hack) continue; const el = $('xm_' + a.key), st = EXS[a.key];
+    if (!show || st === 'ok') { el.style.display = 'none'; continue; }
+    const [d, edge] = projMark(el, a.x, 1.7, a.z, { quai: -42, west: 0, south: 42 }[a.key]); el.className = 'xm ' + st;
+    const ico = st === 'no' ? '✕' : st === 'hack' ? Math.floor(Math.min(1, HACK.t / HACK.dur) * 100) + '%' : '?';
+    el.querySelector('b').textContent = ico; el.querySelector('span').textContent = (edge < 0 ? '◀ ' : '') + L2(XNAME[a.key]) + ' · ' + Math.round(d) + ' m' + (edge > 0 ? ' ▶' : ''); }
+}
 
 /* ---------- cinématique de fin : caméras de surveillance, l'usine explose ---------- */
 const CINE = { t: 0, i: 0, booms: [], shot: -1 };
@@ -1832,7 +1873,7 @@ const CINE_SHOTS = [
   { t0: 7.7, t1: 9.4, cam: ["CAM 02 · SECTEUR B — ALERTE", "CAM 02 · SECTOR B — ALERT"], a: [0, 7.8, 12.2], b: [0, 7.4, 10.5], look: [0, .5, -4] }
 ];
 function startCine() {
-  state = 'cine'; CINE.t = 0; CINE.shot = -1; mL = mR = false; closeKP(); $('hud').classList.remove('on'); gunPivot.visible = false; $('wp').style.display = 'none';
+  state = 'cine'; CINE.t = 0; CINE.shot = -1; mL = mR = false; closeKP(); $('hud').classList.remove('on'); gunPivot.visible = false; $('wp').style.display = 'none'; stopHack(); for (const k of ['quai', 'west', 'south']) $('xm_' + k).style.display = 'none';
   if (document.pointerLockElement === canvas) document.exitPointerLock();
   const P = [[-14.5, -8.6], [-6, -1.2], [-18, -11.3], [15.6, 8.8], [3, -1.2], [-15.5, 5.5], [9, 4], [14.5, -8.6], [-5.4, 4.8], [0, 8], [7.5, 3.8], [16.5, -1.5], [-10.5, 8.6], [6, 12], [-3, 12], [11, 8], [-12, -4], [4, -9], [-17, 2.8], [18.5, 3.6]];
   CINE.booms = P.map((p, i) => ({ t: .9 + i * .36 + rr(-.1, .1), x: p[0] + rr(-.6, .6), z: p[1] + rr(-.6, .6), done: false }));
