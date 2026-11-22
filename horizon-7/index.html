@@ -136,14 +136,15 @@ body.touch #reload{top:64%}
 @media (max-height:520px){.screen{justify-content:flex-start;overflow-y:auto;padding:14px 0}.screen h1{font-size:44px!important}.screen h2{margin:4px 0 10px;font-size:13px}.brief{font-size:13px;margin:0 0 12px;padding:8px 12px;max-width:600px}.btn{font-size:17px;padding:10px 34px 10px 40px}.col{gap:8px}.stats{font-size:14px;margin-bottom:12px}.stats b{font-size:20px}.q{margin-top:12px}body.touch .tkeys{font-size:12px;margin-top:10px}}
 
 /* ---------- digicode ---------- */
-#kp{position:fixed;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;pointer-events:none}
+#kp{position:fixed;left:calc(36px + env(safe-area-inset-left));top:50%;transform:translateY(-50%);z-index:6;pointer-events:none}
+body.touch #kp{left:calc(10px + env(safe-area-inset-left));top:46%;transform:translateY(-50%) scale(.82);transform-origin:left center}
 #kp.hide{display:none}
-.kpb{pointer-events:auto;position:relative;background:rgba(14,16,18,.9);border:2px solid #4a4f55;border-radius:14px;padding:16px 22px 14px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.7);touch-action:none}
+.kpb{pointer-events:auto;position:relative;background:rgba(14,16,18,.72);border:2px solid #4a4f55;border-radius:14px;padding:16px 22px 14px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.7);touch-action:none}
 .kpt{font-size:12px;letter-spacing:4px;color:#ffcf5a;padding:0 34px}
 #kpD{font-family:'Oswald',monospace;font-size:40px;letter-spacing:10px;color:#8dff9a;background:#050806;border:1px solid #23402a;border-radius:6px;margin:8px 0 4px;padding:2px 10px;text-shadow:0 0 10px rgba(80,255,120,.6)}
 #kpM{height:20px;font-size:13px;letter-spacing:2px;font-weight:700}#kpM.bad{color:#ff5a3c}#kpM.ok{color:#5aff7a}
-#kpG{display:grid;grid-template-columns:repeat(3,64px);gap:8px;justify-content:center;margin-top:6px}
-#kpG button{height:50px;border-radius:8px;border:1px solid #5a6068;background:linear-gradient(#2c3036,#1b1e22);color:#f0ece2;font-family:'Oswald',sans-serif;font-size:22px;touch-action:none}
+#kpG{display:grid;grid-template-columns:repeat(3,56px);gap:7px;justify-content:center;margin-top:6px}
+#kpG button{height:44px;border-radius:8px;border:1px solid #5a6068;background:linear-gradient(#2c3036,#1b1e22);color:#f0ece2;font-family:'Oswald',sans-serif;font-size:22px;touch-action:none}
 #kpG button:active{background:#ff8a3c;color:#111}
 #kpX{position:absolute;right:8px;top:6px;width:30px;height:30px;border-radius:50%;border:1px solid #666;background:transparent;color:#ccc;font-size:14px}
 .kph{font-size:11px;opacity:.55;margin-top:8px;letter-spacing:1px}body.touch .kph{display:none}
@@ -200,7 +201,7 @@ body.touch #reload{top:64%}
   <div id="tMsg"></div>
 </div>
 <div id="rotate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/></svg><div>TOURNE TON TÉLÉPHONE<br>EN MODE PAYSAGE</div></div>
-<div id="kp" class="hide"><div class="kpb"><button id="kpX">✕</button><div class="kpt">DIGICODE · PORTE DE SORTIE</div><div id="kpD">_ _ _ _</div><div id="kpM"></div><div id="kpG"></div><div class="kph">Sur ordinateur : tape le code au clavier, Entrée pour valider</div></div></div>
+<div id="kp" class="hide"><div class="kpb"><button id="kpX">✕</button><div class="kpt">DIGICODE · PORTE DE SORTIE</div><div id="kpD">_ _ _ _</div><div id="kpM"></div><div id="kpG"></div><div class="kph">Tape les chiffres au clavier · tu peux continuer à tirer</div></div></div>
 <div id="cine" class="hide"><div class="rec"><i></i>REC</div><div class="cam" id="cineCam"></div><div class="ts" id="cineTs"></div><div class="noise" id="cineN"></div><div class="lost" id="cineL">SIGNAL PERDU</div><div class="skip">Appuie pour passer</div></div>
 <div class="layer" id="flash"></div>
 <div class="layer" id="fade"></div>
@@ -1588,7 +1589,7 @@ function updatePlayer(dt) {
   camera.rotation.set(player.pitch + player.kickP + rr(-sk, sk), player.yaw + player.kickY + rr(-sk, sk), Math.sin(W.bob) * .006 * Math.min(1, spd / 4) + rr(-sk, sk) * .5);
   player.hurtT += dt; if (player.hurtT > 4 && player.hp < 100) { player.hp = Math.min(100, player.hp + dt * 8); hud(); }
   if (player.hp < 40) { player.beat -= dt; if (player.beat <= 0) { player.beat = .55 + player.hp / 100; SFX.beat(); } }
-  if (mL && !actOn && !KP.open) fire(); if (keys.KeyR) startReload();
+  if (mL && !(actOn && !actOn.key)) fire();   // près d'un digicode ou digicode ouvert : on peut toujours tirer if (keys.KeyR) startReload();
   return run;
 }
 function updateWeapon(dt, run) {
@@ -1669,6 +1670,7 @@ function updateMission(dt) {
   if (step >= 7 && step <= 9 && p.z > 20) { bangT -= dt; if (bangT <= 0) { bangT = rr(1.3, 3.2); v1.set(20, UY + 1.5, 30); const s = panOf(v1); SFX.bang(s.pan, Math.min(1, s.vol * 2.2)); DOOR.heavy.sa = .05; DOOR.heavy.shake = .01; for (let i = 0; i < 6; i++) smoke.emit(19.8, UY + rr(.3, 3), 30 + rr(-1, 1), rr(-1.2, -.3), rr(-.2, .4), rr(-.3, .3), rr(.6, 1.2), rr(.1, .2), .4, .38, .35, .25, .3, 3); if (dist2(20, 30) < 9) player.shake = Math.max(player.shake, .25); } }
   if (DOOR.heavy.sa) { DOOR.heavy.sa = Math.max(0, DOOR.heavy.sa - dt * .12); DOOR.heavy.shake = DOOR.heavy.sa * Math.sin(time * 70) || 1e-6; if (!DOOR.heavy.sa) DOOR.heavy.shake = 0; }
   // interactions (maintenir E)
+  if (KP.open && !KP.lock) { const a = ACTS.find(q => q.key === KP.door); if (a && dist2(a.x, a.z) > 3.6) closeKP(); }   // trop loin de la porte : le digicode se referme (les chiffres tapés restent)
   actOn = null; for (const a of ACTS) if ((a.step === step || (a.steps && a.steps.includes(step) && EXS[a.key] === 'unk' && !KP.open)) && dist2(a.x, a.z) < a.r) actOn = a;
   const pr = $('prompt');
   if (actOn) { pr.style.opacity = 1; $('promptT').textContent = actOn.label; if (keys.KeyE) { if (actP === 0 && actOn.start) actOn.start(); actP += dt / actOn.hold; beepT -= dt; if (step >= 8 && beepT <= 0) { beepT = .35; SFX.beep(); } if (actP >= 1) { const a = actOn; actP = 0; actOn = null; a.done(); } } else actP = Math.max(0, actP - dt * 1.5); $('promptB').style.width = (actP * 100) + '%'; }
@@ -1764,8 +1766,7 @@ function resetBarrels() {
 const KP = { open: false, door: null, buf: '', lock: false };
 function kpShow() { $('kpD').textContent = (KP.buf + '____').slice(0, 4).split('').join(' '); }
 function openKP(k) {
-  KP.open = true; KP.door = k; KP.buf = ''; KP.lock = false; kpShow(); $('kpM').textContent = ''; $('kpM').className = ''; $('kp').classList.remove('hide'); mL = false; keys.KeyE = false; SFX.beep();
-  if (document.pointerLockElement === canvas) document.exitPointerLock();
+  if (KP.door !== k) KP.buf = ''; KP.open = true; KP.door = k; KP.lock = false; kpShow(); $('kpM').textContent = ''; $('kpM').className = ''; $('kp').classList.remove('hide'); keys.KeyE = false; SFX.beep();
 }
 function closeKP() { KP.open = false; $('kp').classList.add('hide'); }
 function kpMsg(t, c) { const m = $('kpM'); m.textContent = t; m.className = c; }
