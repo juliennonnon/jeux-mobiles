@@ -1997,10 +1997,11 @@ const grade = new ShaderPass({
 composer.addPass(grade);
 
 function setQuality(q) {
+  q = Math.max(0, Math.min(2, Math.round(+q))); if (!(q >= 0)) q = 1;
   quality = q; const pr = [1, Math.min(devicePixelRatio || 1, 1.5), Math.min(devicePixelRatio || 1, 2)][q];
   renderer.setPixelRatio(pr); renderer.setSize(innerWidth, innerHeight); composer.setPixelRatio(pr); composer.setSize(innerWidth, innerHeight); grade.uniforms.uPx.value.set(1 / (innerWidth * pr), 1 / (innerHeight * pr)); if (torch) { const ts = q > 1 ? 2048 : 1024; if (torch.shadow.mapSize.x !== ts) { torch.shadow.mapSize.set(ts, ts); if (torch.shadow.map) { torch.shadow.map.dispose(); torch.shadow.map = null; } } }
   gtao.enabled = q > 0; for (const l of lamps) if (l.shadow) l.L.castShadow = q > 0; if (moon) { const ms = IS_TOUCH ? 1024 : q > 0 ? 4096 : 2048; if (moon.shadow.mapSize.x !== ms) { moon.shadow.mapSize.set(ms, ms); if (moon.shadow.map) { moon.shadow.map.dispose(); moon.shadow.map = null; } } }
-  document.querySelectorAll('.q button').forEach(b => b.classList.toggle('sel', +b.dataset.q === q));
+  document.querySelectorAll('button[data-q]').forEach(b => b.classList.toggle('sel', +b.dataset.q === q));
 }
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); });
 
@@ -2047,7 +2048,7 @@ addEventListener('mouseup', e => { if (e.button === 0) mL = false; if (e.button 
 addEventListener('contextmenu', e => e.preventDefault());
 $('play').addEventListener('click', startGame); $('resume').addEventListener('click', resume); $('restart').addEventListener('click', startGame); $('restart2').addEventListener('click', startGame);
 $('retry').addEventListener('click', () => begin(cp)); $('cpBtn').addEventListener('click', () => begin(cp)); $('quit').addEventListener('click', quitToMenu); $('quit2').addEventListener('click', quitToMenu);
-document.querySelectorAll('.q button').forEach(b => b.addEventListener('click', () => setQuality(+b.dataset.q)));
+document.querySelectorAll('button[data-q]').forEach(b => b.addEventListener('click', () => setQuality(+b.dataset.q)));
 
 /* ---------- boucle ---------- */
 let last = performance.now(), slowT = 0, torchT = 0, torchK = 1, torchKs = 1;
