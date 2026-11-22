@@ -111,6 +111,8 @@ body.touch .keys{display:none}.tkeys{display:none}body.touch .tkeys{display:bloc
 .tb.big{width:96px;height:96px;right:calc(26px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom));border-color:rgba(255,110,80,.75)}.tb.big svg{width:40px;height:40px}
 #tbAds{right:calc(140px + env(safe-area-inset-right));bottom:calc(22px + env(safe-area-inset-bottom))}
 #tbReload{right:calc(128px + env(safe-area-inset-right));bottom:calc(104px + env(safe-area-inset-bottom))}
+#tbTurn{right:calc(214px + env(safe-area-inset-right));bottom:calc(76px + env(safe-area-inset-bottom));width:54px;height:54px}
+.gsens{display:none}body.touch .gsens{display:flex;align-items:center;gap:12px;margin-top:16px;font-size:13px;letter-spacing:.2em}.gsens button{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;font-size:22px}.gsens b{font-family:Oswald,sans-serif;font-size:20px;min-width:52px;text-align:center}
 #tbJump{right:calc(44px + env(safe-area-inset-right));bottom:calc(146px + env(safe-area-inset-bottom))}
 #tbTop{position:absolute;right:calc(14px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));display:flex;gap:8px}
 #tbTop .tb{position:relative;width:46px;height:46px}#tbTop .tb svg{width:22px;height:22px}#tbTop .tb b{position:absolute;right:-3px;bottom:-3px;min-width:18px;height:18px;border-radius:9px;background:#d8402a;color:#fff;font-size:11px;line-height:18px;text-align:center}
@@ -160,6 +162,7 @@ body.touch #reload{top:64%}
   <button class="tb big" id="tbFire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg><span>TIR</span></button>
   <button class="tb" id="tbAds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg><span>VISER</span></button>
   <button class="tb" id="tbReload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></svg><span>RECHARGER</span></button>
+  <button class="tb" id="tbTurn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v5h5"/></svg><span>180°</span></button>
   <button class="tb" id="tbJump"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/><path d="M6 19l6-6 6 6"/></svg><span>SAUT</span></button>
   <div id="tbTop">
     <button class="tb sm" id="tbNade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="6"/><path d="M10 8V6h4v2M14 6l3-2"/></svg><b id="tbNadeN">3</b></button>
@@ -197,6 +200,7 @@ body.touch #reload{top:64%}
 <div class="screen hide" id="pause">
   <h1 style="font-size:64px">PAUSE</h1><h2>ÉCHAP OU P POUR METTRE EN PAUSE</h2>
   <div class="col"><button class="btn" id="resume">REPRENDRE</button><button class="btn" id="cpBtn">DERNIER POINT DE CONTRÔLE</button><button class="btn" id="restart">RECOMMENCER LA MISSION</button><button class="btn red" id="quit">QUITTER LA PARTIE</button></div>
+  <div class="gsens">SENSIBILITÉ DU GYROSCOPE <button id="gsM">−</button><b id="gsV">×2,4</b><button id="gsP">+</button></div>
 </div>
 <div class="screen hide" id="over">
   <h1 style="font-size:clamp(40px,7vw,84px)" id="overT"></h1><h2 id="overS"></h2>
@@ -1667,8 +1671,9 @@ function updateAmbient(dt) {
   if (AC && state !== 'load') { ambT -= dt; if (ambT <= 0) { ambT = rr(2.5, 8); const r = rand(); r < .5 ? SFX.drip() : r < .85 ? SFX.creak() : SFX.clang(); } }
 }
 /* ---------- version mobile : joystick, visée au doigt / gyroscope, boutons ---------- */
-const GY = { want: true, on: false, ok: false, last: 0, msgT: 0 };
-const TP = { joy: null, look: new Map(), sens: .0046 };
+let _gs = 2.4; try { _gs = +localStorage.getItem('h7_gyro') || 2.4; } catch (_) { }
+const GY = { want: true, on: false, ok: false, last: 0, msgT: 0, sens: _gs };
+const TP = { joy: null, look: new Map(), sens: .0055, turn: 0 };
 function touchUI() { return IS_TOUCH && state === 'play'; }
 function gyroMsg(t) { const m = $('tMsg'); m.textContent = t; m.style.opacity = 1; GY.msgT = 4.5; }
 async function enableGyro() {
@@ -1690,11 +1695,12 @@ addEventListener('devicemotion', e => {
   const b = (r.beta || 0) * Math.PI / 180, g = (r.gamma || 0) * Math.PI / 180;
   let yawR = b * Math.sin(ang) + g * Math.cos(ang), pitR = b * Math.cos(ang) - g * Math.sin(ang);
   const dz = .03; yawR = Math.abs(yawR) < dz ? 0 : yawR - Math.sign(yawR) * dz; pitR = Math.abs(pitR) < dz ? 0 : pitR - Math.sign(pitR) * dz;
-  const k = 1.15 * (1 - W.ads * .35);
-  player.yaw += yawR * dt * k; player.pitch = clamp(player.pitch + pitR * dt * k, -1.45, 1.45);
+  // gain amplifié : ~70° de rotation du téléphone = demi-tour ; les gestes rapides sont encore plus amplifiés, les lents restent précis
+  const acc = 1 + .7 * clamp((Math.abs(yawR) - 1) / 2.5, 0, 1), k = GY.sens * (1 - W.ads * .4);
+  player.yaw += yawR * dt * k * acc; player.pitch = clamp(player.pitch + pitR * dt * k * .7, -1.45, 1.45);
 });
 function lookBy(dx, dy) {
-  const s = TP.sens * (1 - W.ads * .5); player.yaw -= dx * s; player.pitch = clamp(player.pitch - dy * s, -1.45, 1.45);
+  const v = Math.abs(dx), s = TP.sens * (1 - W.ads * .5) * (1 + .8 * clamp((v - 8) / 30, 0, 1)); // glisser vite = tourner plus player.yaw -= dx * s; player.pitch = clamp(player.pitch - dy * s, -1.45, 1.45);
   W.sway.x = clamp(W.sway.x - dx * .00006, -.012, .012); W.sway.y = clamp(W.sway.y + dy * .00006, -.012, .012);
 }
 function cap(el, e) { try { el.setPointerCapture(e.pointerId); } catch (_) { } }
@@ -1737,6 +1743,10 @@ function setupTouch() {
   tap('tbFlare', () => throwFlare());
   tap('tbTorch', () => { torchOn = !torchOn; SFX.click(); $('tbTorch').classList.toggle('on', torchOn); });
   tap('tbPause', () => pause());
+  tap('tbTurn', () => { if (!TP.turn) TP.turn = Math.PI; });
+  const showS = () => { $('gsV').textContent = '×' + GY.sens.toFixed(1).replace('.', ','); }; showS();
+  const setS = d => { GY.sens = clamp(Math.round((GY.sens + d) * 10) / 10, 1, 5); try { localStorage.setItem('h7_gyro', GY.sens); } catch (_) { } showS(); };
+  $('gsM').addEventListener('click', () => setS(-.4)); $('gsP').addEventListener('click', () => setS(.4));
   tap('tbGyro', () => { GY.want = !GY.on; if (GY.want) enableGyro(); else { GY.on = false; syncGyroBtn(); gyroMsg('Gyroscope coupé : glisse le doigt à droite pour viser'); } });
   hold('tbJump', 'Space'); hold('tbAct', 'KeyE');
   // au lancement : gyroscope (doit être demandé sur un geste), plein écran, paysage
@@ -1766,6 +1776,7 @@ function touchFrame(now) {
   const on = touchUI(); $('touch').classList.toggle('hide', !on);
   if (!on) { if (TP.joy) { TP.joy = null; TC.mx = TC.mz = 0; TC.run = false; $('joy').classList.remove('on'); } return; }
   aimAssist(dt);
+  if (TP.turn > 0) { const st = Math.min(TP.turn, dt * 11); player.yaw += st; TP.turn -= st; }
   const act = $('tbAct'), show = !!actOn; act.classList.toggle('show', show);
   if (show) { $('tbActT').textContent = actOn.label; $('tbActB').style.width = $('promptB').style.width; } else keys.KeyE = false;
   $('tbNadeN').textContent = grenN; $('tbNade').classList.toggle('off', grenN <= 0); $('tbFlareN').textContent = flareN; $('tbFlare').classList.toggle('off', flareN <= 0);
