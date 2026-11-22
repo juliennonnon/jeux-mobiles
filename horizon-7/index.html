@@ -58,6 +58,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#e8e4da;f
 @keyframes fd{0%{opacity:0;transform:translateX(12px)}10%{opacity:1;transform:none}70%{opacity:1}100%{opacity:0}}
 .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(6,8,10,.55),rgba(0,0,0,.93));text-align:center;z-index:5;transition:opacity .4s}
 .screen.hide{opacity:0;pointer-events:none}
+.screen.hide *{pointer-events:none!important} /* écrans cachés : leurs boutons ne doivent plus intercepter les appuis */
 .screen h1{font-family:'Oswald',sans-serif;font-weight:700;font-size:clamp(48px,9vw,120px);letter-spacing:.14em;line-height:1;color:#efe9da;text-shadow:0 0 40px rgba(255,80,40,.25)}
 .screen h1 span{color:#d8402a}
 .screen h2{font-family:'Oswald',sans-serif;font-weight:300;font-size:18px;letter-spacing:.6em;opacity:.7;margin:10px 0 34px}
@@ -111,8 +112,7 @@ body.touch .keys{display:none}.tkeys{display:none}body.touch .tkeys{display:bloc
 .tb.big{width:96px;height:96px;right:calc(26px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom));border-color:rgba(255,110,80,.75)}.tb.big svg{width:40px;height:40px}
 #tbAds{right:calc(140px + env(safe-area-inset-right));bottom:calc(22px + env(safe-area-inset-bottom))}
 #tbReload{right:calc(128px + env(safe-area-inset-right));bottom:calc(104px + env(safe-area-inset-bottom))}
-#tbCenter{right:calc(214px + env(safe-area-inset-right));bottom:calc(144px + env(safe-area-inset-bottom));width:54px;height:54px}
-#tbTurn{right:calc(214px + env(safe-area-inset-right));bottom:calc(76px + env(safe-area-inset-bottom));width:54px;height:54px}
+#tbCenter{right:calc(214px + env(safe-area-inset-right));bottom:calc(76px + env(safe-area-inset-bottom));width:54px;height:54px}
 .gsens{display:none}body.touch .gsens{display:flex;align-items:center;gap:12px;margin-top:16px;font-size:13px;letter-spacing:.2em}.gsens button{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;font-size:22px}.gsens b{font-family:Oswald,sans-serif;font-size:20px;min-width:52px;text-align:center}
 #tbJump{right:calc(44px + env(safe-area-inset-right));bottom:calc(146px + env(safe-area-inset-bottom))}
 #tbTop{position:absolute;right:calc(14px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));display:flex;gap:8px}
@@ -163,7 +163,6 @@ body.touch #reload{top:64%}
   <button class="tb big" id="tbFire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg><span>TIR</span></button>
   <button class="tb" id="tbAds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg><span>VISER</span></button>
   <button class="tb" id="tbReload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></svg><span>RECHARGER</span></button>
-  <button class="tb" id="tbTurn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v5h5"/></svg><span>180°</span></button>
   <button class="tb" id="tbCenter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h6M15 12h6"/><circle cx="12" cy="12" r="2"/><path d="M12 4v3M12 17v3"/></svg><span>RECENTRER</span></button>
   <button class="tb" id="tbJump"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/><path d="M6 19l6-6 6 6"/></svg><span>SAUT</span></button>
   <div id="tbTop">
@@ -1747,7 +1746,6 @@ function setupTouch() {
   tap('tbFlare', () => throwFlare());
   tap('tbTorch', () => { torchOn = !torchOn; SFX.click(); $('tbTorch').classList.toggle('on', torchOn); });
   tap('tbPause', () => pause());
-  tap('tbTurn', () => { player.yaw += Math.PI; flashA = Math.max(flashA, .12); SFX.step(); });
   tap('tbCenter', () => { player.pitch = 0; gyroMsg('Visée recentrée'); GY.msgT = 1.2; });
   const showS = () => { $('gsV').textContent = '×' + GY.sens.toFixed(1).replace('.', ','); }; showS();
   const setS = d => { GY.sens = clamp(Math.round((GY.sens + d) * 10) / 10, .6, 4); try { localStorage.setItem('h7_gyro2', GY.sens); } catch (_) { } showS(); };
