@@ -134,6 +134,30 @@ body.touch #radio{bottom:auto;top:calc(74px + env(safe-area-inset-top));font-siz
 body.touch #banner .a{font-size:46px;letter-spacing:10px}body.touch #banner .b{font-size:13px}
 body.touch #reload{top:64%}
 @media (max-height:520px){.screen{justify-content:flex-start;overflow-y:auto;padding:14px 0}.screen h1{font-size:44px!important}.screen h2{margin:4px 0 10px;font-size:13px}.brief{font-size:13px;margin:0 0 12px;padding:8px 12px;max-width:600px}.btn{font-size:17px;padding:10px 34px 10px 40px}.col{gap:8px}.stats{font-size:14px;margin-bottom:12px}.stats b{font-size:20px}.q{margin-top:12px}body.touch .tkeys{font-size:12px;margin-top:10px}}
+
+/* ---------- digicode ---------- */
+#kp{position:fixed;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;pointer-events:none}
+#kp.hide{display:none}
+.kpb{pointer-events:auto;position:relative;background:rgba(14,16,18,.9);border:2px solid #4a4f55;border-radius:14px;padding:16px 22px 14px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.7);touch-action:none}
+.kpt{font-size:12px;letter-spacing:4px;color:#ffcf5a;padding:0 34px}
+#kpD{font-family:'Oswald',monospace;font-size:40px;letter-spacing:10px;color:#8dff9a;background:#050806;border:1px solid #23402a;border-radius:6px;margin:8px 0 4px;padding:2px 10px;text-shadow:0 0 10px rgba(80,255,120,.6)}
+#kpM{height:20px;font-size:13px;letter-spacing:2px;font-weight:700}#kpM.bad{color:#ff5a3c}#kpM.ok{color:#5aff7a}
+#kpG{display:grid;grid-template-columns:repeat(3,64px);gap:8px;justify-content:center;margin-top:6px}
+#kpG button{height:50px;border-radius:8px;border:1px solid #5a6068;background:linear-gradient(#2c3036,#1b1e22);color:#f0ece2;font-family:'Oswald',sans-serif;font-size:22px;touch-action:none}
+#kpG button:active{background:#ff8a3c;color:#111}
+#kpX{position:absolute;right:8px;top:6px;width:30px;height:30px;border-radius:50%;border:1px solid #666;background:transparent;color:#ccc;font-size:14px}
+.kph{font-size:11px;opacity:.55;margin-top:8px;letter-spacing:1px}body.touch .kph{display:none}
+@media (max-height:520px){#kpD{font-size:30px;margin:4px 0 2px}#kpG{grid-template-columns:repeat(3,56px);gap:6px}#kpG button{height:40px;font-size:18px}.kpb{padding:10px 16px}}
+/* ---------- cinématique (vidéosurveillance) ---------- */
+#c.cctv{filter:saturate(.35) contrast(1.2) brightness(1.08)}
+#cine{position:fixed;inset:0;z-index:4;pointer-events:none;font-family:'Courier New',monospace;color:#e8f2e8;text-shadow:0 0 4px rgba(0,0,0,.9);background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px)}
+#cine.hide{display:none}
+#cine .rec{position:absolute;left:28px;top:22px;font-size:20px;letter-spacing:3px;font-weight:700}#cine .rec i{display:inline-block;width:14px;height:14px;border-radius:50%;background:#ff2a1a;margin-right:10px;animation:bl 1s steps(1) infinite}
+#cine .cam{position:absolute;left:28px;bottom:24px;font-size:18px;letter-spacing:2px}#cine .ts{position:absolute;right:28px;top:22px;font-size:18px;letter-spacing:2px}
+#cine .skip{position:absolute;right:28px;bottom:24px;font-size:12px;letter-spacing:2px;opacity:.5}
+#cine .noise{position:absolute;inset:0;opacity:0;background-size:256px 256px;animation:nz .12s steps(3) infinite;transition:opacity .1s}
+@keyframes nz{0%{background-position:0 0}33%{background-position:-90px 40px}66%{background-position:60px -70px}}
+#cine .lost{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:34px;letter-spacing:8px;font-weight:700;background:#000;padding:10px 24px;opacity:0}
 </style>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}
@@ -176,6 +200,8 @@ body.touch #reload{top:64%}
   <div id="tMsg"></div>
 </div>
 <div id="rotate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/></svg><div>TOURNE TON TÉLÉPHONE<br>EN MODE PAYSAGE</div></div>
+<div id="kp" class="hide"><div class="kpb"><button id="kpX">✕</button><div class="kpt">DIGICODE · PORTE DE SORTIE</div><div id="kpD">_ _ _ _</div><div id="kpM"></div><div id="kpG"></div><div class="kph">Sur ordinateur : tape le code au clavier, Entrée pour valider</div></div></div>
+<div id="cine" class="hide"><div class="rec"><i></i>REC</div><div class="cam" id="cineCam"></div><div class="ts" id="cineTs"></div><div class="noise" id="cineN"></div><div class="lost" id="cineL">SIGNAL PERDU</div><div class="skip">Appuie pour passer</div></div>
 <div class="layer" id="flash"></div>
 <div class="layer" id="fade"></div>
 <div class="screen" id="menu">
@@ -850,6 +876,9 @@ function buildMissionWorld() {
       const L = new THREE.PointLight(0x30ff60, 0, 10, 1.6); L.position.set(x + (k === 'west' ? .5 : 0), y - .2, z + (k === 'quai' ? .5 : k === 'south' ? -.5 : 0)); world.add(L); EXL[k] = { m, L };
     }
     for (const [x, z] of [[7.2, 24.3], [12.8, 36.0], [3.6, 33.4]]) barrel(x, z, M.red, false, rr(0, 6), UY);
+    for (const [x, z, ry] of [[10.1, -12.96, 0], [-19.71, 2.75, Math.PI / 2], [-13.9, 12.96, Math.PI]]) { // digicodes
+      const g = grp(x, 1.42, z, ry); B(.32, .46, .07, M.grey, 0, 0, 0, 1, { parent: g, shoot: false }); B(.2, .08, .01, M.screen, 0, .13, .04, 1, { parent: g, shoot: false });
+      for (let i = 0; i < 12; i++) B(.045, .035, .015, M.black, -.07 + (i % 3) * .07, .04 - Math.floor(i / 3) * .055, .042, 1, { parent: g, shoot: false }); }
     sign('ZONE DE SÉCURITÉ', 2.4, .5, '#eafff0', '#0d7a35', 8, 2.3, -26.15, 0, [1.2, 2.4, 1.5]); }
 }
 
@@ -1353,7 +1382,10 @@ const ACTS = [
   { step: 3, x: 31.2, z: -2.2, r: 2.3, hold: 2.6, label: 'Démarrer le générateur', start: () => SFX.starter(), done: () => enter(4) },
   { step: 4, x: 32.3, z: 2.6, r: 2.2, hold: 1.6, label: 'Réinitialiser le tableau', done: () => enter(5) },
   { step: 8, x: 10, z: 29.9, r: 2.3, hold: 4.5, label: 'Poser la charge de démolition', done: () => enter(9) },
-  { step: 9, x: 10, z: 29.9, r: 2.3, hold: 2, label: 'Armer le dispositif', done: () => enter(10) }
+  { step: 9, x: 10, z: 29.9, r: 2.3, hold: 2, label: 'Armer le dispositif', done: () => enter(10) },
+  { steps: [10, 11], key: 'quai', x: 10.1, z: -12.2, r: 2.1, hold: .12, label: 'Saisir le code', done: () => openKP('quai') },
+  { steps: [10, 11], key: 'west', x: -19, z: 2.75, r: 2.1, hold: .12, label: 'Saisir le code', done: () => openKP('west') },
+  { steps: [10, 11], key: 'south', x: -13.9, z: 12.2, r: 2.1, hold: .12, label: 'Saisir le code', done: () => openKP('south') }
 ];
 let step = 0, cp = 1, power = false, genOn = false, emergency = false, doorP = 0, timer = 0, tPhase = 0, spawnT = 0, actP = 0, actOn = null, bangT = 2, sirenT = 0, alarmT = 0, radioT = 0, beepT = 0, runT = 0, powerK = 0, winT = -1;
 const dist2 = (x, z) => Math.hypot(player.pos.x - x, player.pos.z - z);
@@ -1372,8 +1404,15 @@ const EXITS = {
   south: { name: "l'issue de secours du couloir sud", at: [-12, 13.3], wp: [-12, 1.6, 17.6], win: p => p.z > 17.4 && p.x < -9.5 }
 };
 let exitK = 'quai', exitWarn = {};
-function pickExit() { exitK = pick(Object.keys(EXITS)); exitWarn = {}; const E = EXITS[exitK]; STEPS[11].txt = 'Sortie ouverte : ' + E.name; STEPS[11].wp = E.wp; STEPS[11].radio = 'Le drone a repéré la sortie ouverte : ' + E.name + '. Foncez !'; }
-function exitDoors(instant) { for (const k of ['quai', 'west', 'south']) setDoor(k, k === exitK ? 1 : 0, instant); }
+let exitCode = '0000', exitOpen = false; const EXS = {};
+function pickExit() {
+  exitK = pick(Object.keys(EXITS)); exitWarn = {}; exitOpen = false; for (const k in EXITS) EXS[k] = 'unk';
+  exitCode = String(1000 + Math.floor(rand() * 9000)); const E = EXITS[exitK], sp = exitCode.split('').join('-');
+  STEPS[10].txt = 'ÉVACUE ! Code ' + exitCode + ' : une seule porte de sortie l\'accepte'; STEPS[10].wp = null;
+  STEPS[10].radio = 'Compte à rebours lancé ! Code d\'ouverture des issues : ' + sp + '. La défaillance en a grillé : une seule porte marche encore, trouvez-la !';
+  STEPS[11].txt = 'Porte valide : ' + E.name + ' — code ' + exitCode; STEPS[11].wp = E.wp; STEPS[11].radio = 'Le drone a localisé la seule issue qui fonctionne : ' + E.name + '. Code ' + sp + ' !';
+}
+function exitDoors(instant) { for (const k of ['quai', 'west', 'south']) setDoor(k, k === exitK && exitOpen ? 1 : 0, instant); }
 function setWorld(s) {
   power = s >= 5; genOn = s >= 4; emergency = s >= 10; doorP = s >= 7 ? 1 : 0;
   setDoor('sec', s >= 7 ? 1 : 0, true); if (s >= 10) exitDoors(true); else { setDoor('quai', 0, true); setDoor('west', 1, true); setDoor('south', 1, true); } setDoor('heavy', s >= 10 ? 1 : 0, true); setDoor('cells', s >= 10 ? 1 : 0, true);
@@ -1549,7 +1588,7 @@ function updatePlayer(dt) {
   camera.rotation.set(player.pitch + player.kickP + rr(-sk, sk), player.yaw + player.kickY + rr(-sk, sk), Math.sin(W.bob) * .006 * Math.min(1, spd / 4) + rr(-sk, sk) * .5);
   player.hurtT += dt; if (player.hurtT > 4 && player.hp < 100) { player.hp = Math.min(100, player.hp + dt * 8); hud(); }
   if (player.hp < 40) { player.beat -= dt; if (player.beat <= 0) { player.beat = .55 + player.hp / 100; SFX.beat(); } }
-  if (mL && !actOn) fire(); if (keys.KeyR) startReload();
+  if (mL && !actOn && !KP.open) fire(); if (keys.KeyR) startReload();
   return run;
 }
 function updateWeapon(dt, run) {
@@ -1612,17 +1651,16 @@ function updateZombies(dt) {
 /* ---------- déroulement de la mission ---------- */
 function updateMission(dt) {
   const S = STEPS[step], p = player.pos; tPhase += dt;
-  if (winT >= 0) { winT += dt; if (winT > 1.6 && state === 'play') { state = 'win'; flashA = 1; SFX.boom(); setTimeout(() => endScreen('win'), 1800); } return; }
+  if (winT >= 0) { winT += dt; if (winT > 1.1 && state === 'play') startCine(); return; }
   // transitions
   if (step === 1 && dist2(DOORP[0], 12.2) < 4.6) enter(2);
   else if (step === 2 && p.x > 25.7) enter(3);
   else if (step === 5 && dist2(DOORP[0], 12.2) < 7) enter(6);
   else if (step === 6) { const near = dist2(DOORP[0], 12.2) < 11.5; if (near) doorP = Math.min(1, doorP + dt / 45); DOOR.sec.target = doorP * .1; $('topS').textContent = near ? '' : 'RESTE PRÈS DE LA PORTE'; if (doorP >= 1) enter(7); }
   else if (step === 7 && dist2(ZONE[0], ZONE[2]) < 2.4 && p.z > 24) enter(8);
-  else if (step === 10 && (timer < 75 || dist2(EXITS[exitK].at[0], EXITS[exitK].at[1]) < 8)) enter(11);
+  else if (step === 10 && timer < 50 && !exitOpen) enter(11);
   if (step >= 10) {
     timer -= dt; if (timer <= 0) { timer = 0; state = 'dead'; flashA = 1.6; SFX.boom(); hud(); setTimeout(() => endScreen('boom'), 1700); return; }
-    for (const k in EXITS) if (k !== exitK && !exitWarn[k] && dist2(EXITS[k].at[0], EXITS[k].at[1]) < 5) { exitWarn[k] = 1; radio('Bloquée ! Celle-ci est verrouillée, cherche une autre sortie.'); }
     if (EXITS[exitK].win(p)) { winT = 0; radio('Vous êtes en zone de sécurité. Détonation.'); $('wp').style.display = 'none'; }
     beepT -= dt; if (beepT <= 0 && !actOn) { beepT = timer < 20 ? .5 : 1; if (timer < 30) SFX.beep(); }
     sirenT -= dt; if (sirenT <= 0) { sirenT = 2.1; SFX.siren(); }
@@ -1631,7 +1669,7 @@ function updateMission(dt) {
   if (step >= 7 && step <= 9 && p.z > 20) { bangT -= dt; if (bangT <= 0) { bangT = rr(1.3, 3.2); v1.set(20, UY + 1.5, 30); const s = panOf(v1); SFX.bang(s.pan, Math.min(1, s.vol * 2.2)); DOOR.heavy.sa = .05; DOOR.heavy.shake = .01; for (let i = 0; i < 6; i++) smoke.emit(19.8, UY + rr(.3, 3), 30 + rr(-1, 1), rr(-1.2, -.3), rr(-.2, .4), rr(-.3, .3), rr(.6, 1.2), rr(.1, .2), .4, .38, .35, .25, .3, 3); if (dist2(20, 30) < 9) player.shake = Math.max(player.shake, .25); } }
   if (DOOR.heavy.sa) { DOOR.heavy.sa = Math.max(0, DOOR.heavy.sa - dt * .12); DOOR.heavy.shake = DOOR.heavy.sa * Math.sin(time * 70) || 1e-6; if (!DOOR.heavy.sa) DOOR.heavy.shake = 0; }
   // interactions (maintenir E)
-  actOn = null; for (const a of ACTS) if (a.step === step && dist2(a.x, a.z) < a.r) actOn = a;
+  actOn = null; for (const a of ACTS) if ((a.step === step || (a.steps && a.steps.includes(step) && EXS[a.key] === 'unk' && !KP.open)) && dist2(a.x, a.z) < a.r) actOn = a;
   const pr = $('prompt');
   if (actOn) { pr.style.opacity = 1; $('promptT').textContent = actOn.label; if (keys.KeyE) { if (actP === 0 && actOn.start) actOn.start(); actP += dt / actOn.hold; beepT -= dt; if (step >= 8 && beepT <= 0) { beepT = .35; SFX.beep(); } if (actP >= 1) { const a = actOn; actP = 0; actOn = null; a.done(); } } else actP = Math.max(0, actP - dt * 1.5); $('promptB').style.width = (actP * 100) + '%'; }
   else { pr.style.opacity = 0; actP = 0; }
@@ -1679,8 +1717,9 @@ function updateAmbient(dt) {
   if (zoneRing.visible) zoneRing.material.opacity = .65 + .35 * Math.sin(time * 4);
   if (LP.mach) { const dH = Math.hypot(camera.position.x, camera.position.z); LP.mach.value = lerp(LP.mach.value, powerK > .5 ? .2 / (1 + Math.max(0, dH - 14) * .12) : 0, .05); LP.gen.value = lerp(LP.gen.value, genOn ? .16 / (1 + Math.hypot(camera.position.x - 31, camera.position.z + 3.3) * .1) : 0, .05); }
   updateDoors(dt); updateBarrels(dt);
-  for (const k in EXL) { const e = EXL[k], open = k === exitK; if (!emergency) { e.L.intensity = 0; e.m.color.setRGB(.03, .03, .03); continue; }
-    const f = open ? (Math.sin(time * 6) > -.2 ? 1 : .15) : 1; e.L.color.setRGB(open ? .2 : 1, open ? 1 : .08, open ? .35 : .04); e.L.intensity = (open ? 14 : 5) * f; e.m.color.setRGB(open ? .4 * f : 5, open ? 5 * f : .3, open ? 1.2 * f : .15); }
+  for (const k in EXL) { const e = EXL[k], st = EXS[k] || 'unk'; if (!emergency) { e.L.intensity = 0; e.m.color.setRGB(.03, .03, .03); continue; }
+    const c = st === 'ok' ? [.2, 1, .35] : st === 'no' ? [1, .08, .04] : [1, .5, .05], f = st === 'ok' ? (Math.sin(time * 6) > -.2 ? 1 : .15) : st === 'unk' ? .55 + .45 * Math.sin(time * 2.5) : 1;
+    e.L.color.setRGB(c[0], c[1], c[2]); e.L.intensity = (st === 'ok' ? 14 : 6) * f; e.m.color.setRGB(c[0] * 5 * f, c[1] * 5 * f, c[2] * 5 * f); }
   { const u = dust.material.uniforms; u.uTime.value = time; u.uScale.value = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360)); u.uTorch.value = torch ? torch.intensity / 42 : 0; u.uCam.value.copy(camera.position); camera.getWorldDirection(u.uDir.value); }
   steamT -= dt; if (steamT <= 0) { steamT = .05; for (const e of STEAM) if (Math.hypot(e[0] - camera.position.x, e[2] - camera.position.z) < 26) smoke.emit(e[0], e[1], e[2], e[3] + rr(-.25, .25), e[4] + rr(-.2, .2), e[5] + rr(-.25, .25), rr(1.1, 1.9), rr(.1, .18), .62, .64, .66, .11, -.9, 4.5); }
   if (powerK > .5) { sparkT -= dt; if (sparkT <= 0) { sparkT = rr(2.5, 8); const l = lamps.find(a => a.mode === 2); if (l) { l.sp = rr(.12, .3); const q = l.L.position; for (let i = 0; i < 22; i++) glow.emit(q.x, q.y, q.z, rr(-1.6, 1.6), rr(-1, 2), rr(-1.6, 1.6), rr(.5, 1.3), rr(.02, .045), 4, 4.5, 6, 1, 9, 0); const s = panOf(q); if (AC) SFX.zap(s.pan, Math.min(1, s.vol * 2)); } } }
@@ -1719,6 +1758,73 @@ function updateBarrels(dt) {
 }
 function resetBarrels() {
   for (const b of BARRELS) { if (!b.alive) for (const m of b.meshes) if (!shootables.includes(m)) shootables.push(m); b.alive = true; b.hp = 2; b.burn = -1; b.hole = null; b.g.visible = true; b.col.off = false; }
+}
+
+/* ---------- digicode des portes de sortie ---------- */
+const KP = { open: false, door: null, buf: '', lock: false };
+function kpShow() { $('kpD').textContent = (KP.buf + '____').slice(0, 4).split('').join(' '); }
+function openKP(k) {
+  KP.open = true; KP.door = k; KP.buf = ''; KP.lock = false; kpShow(); $('kpM').textContent = ''; $('kpM').className = ''; $('kp').classList.remove('hide'); mL = false; keys.KeyE = false; SFX.beep();
+  if (document.pointerLockElement === canvas) document.exitPointerLock();
+}
+function closeKP() { KP.open = false; $('kp').classList.add('hide'); }
+function kpMsg(t, c) { const m = $('kpM'); m.textContent = t; m.className = c; }
+function kpPress(d) {
+  if (!KP.open || KP.lock) return;
+  if (d === 'X') { closeKP(); return; }
+  if (d === 'C') KP.buf = KP.buf.slice(0, -1); else if (d === 'OK') { kpCheck(); return; } else if (KP.buf.length < 4) { KP.buf += d; SFX.beep(); if (KP.buf.length === 4) setTimeout(kpCheck, 260); }
+  kpShow();
+}
+function kpCheck() {
+  if (!KP.open || KP.lock) return; const k = KP.door;
+  if (KP.buf !== exitCode) { kpMsg('CODE INCORRECT', 'bad'); tn(150, .35, { type: 'square', g: .12, lp: 900 }); KP.buf = ''; kpShow(); return; }
+  KP.lock = true;
+  if (k === exitK) {
+    kpMsg('ACCÈS AUTORISÉ', 'ok'); SFX.ok(); EXS[k] = 'ok'; exitOpen = true; setDoor(k, 1); setTimeout(() => SFX.slam(), 300);
+    STEPS[step].wp = EXITS[k].wp; $('objT').textContent = 'Porte ouverte : sors vite !'; radio('Accès autorisé ! La porte s\'ouvre, sortez immédiatement !'); setTimeout(closeKP, 900);
+  } else {
+    kpMsg('ACCÈS REFUSÉ — PORTE GRILLÉE', 'bad'); EXS[k] = 'no'; SFX.alarm(); tn(120, .6, { type: 'square', g: .14, lp: 700 });
+    radio('Refusé ! Cette porte est grillée. Essayez une autre sortie !'); setTimeout(closeKP, 1300);
+  }
+}
+function setupKP() {
+  const g = $('kpG'); for (const d of ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'OK']) { const b = document.createElement('button'); b.textContent = d === 'C' ? '⌫' : d; b.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); kpPress(d); }); g.appendChild(b); }
+  $('kpX').addEventListener('pointerdown', e => { e.stopPropagation(); kpPress('X'); });
+}
+
+/* ---------- cinématique de fin : caméras de surveillance, l'usine explose ---------- */
+const CINE = { t: 0, i: 0, booms: [], shot: -1 };
+const CINE_SHOTS = [
+  { t0: 0, t1: 4.2, cam: 'CAM 04 · HALL DE PRODUCTION', a: [-18.6, 7.6, 11.6], b: [-15.5, 6.9, 9.2], look: [2, 1, -3] },
+  { t0: 4.2, t1: 7.7, cam: 'CAM 07 · QUAI DE CHARGEMENT', a: [18.2, 6.8, -11.6], b: [15.6, 6.2, -9], look: [-3, 1, 3] },
+  { t0: 7.7, t1: 9.4, cam: 'CAM 02 · SECTEUR B — ALERTE', a: [0, 7.8, 12.2], b: [0, 7.4, 10.5], look: [0, .5, -4] }
+];
+function startCine() {
+  state = 'cine'; CINE.t = 0; CINE.shot = -1; mL = mR = false; closeKP(); $('hud').classList.remove('on'); gunPivot.visible = false; $('wp').style.display = 'none';
+  if (document.pointerLockElement === canvas) document.exitPointerLock();
+  const P = [[-14.5, -8.6], [-6, -1.2], [-18, -11.3], [15.6, 8.8], [3, -1.2], [-15.5, 5.5], [9, 4], [14.5, -8.6], [-5.4, 4.8], [0, 8], [7.5, 3.8], [16.5, -1.5], [-10.5, 8.6], [6, 12], [-3, 12], [11, 8], [-12, -4], [4, -9], [-17, 2.8], [18.5, 3.6]];
+  CINE.booms = P.map((p, i) => ({ t: .9 + i * .36 + rr(-.1, .1), x: p[0] + rr(-.6, .6), z: p[1] + rr(-.6, .6), done: false }));
+  for (let i = 0; i < 8; i++) CINE.booms.push({ t: 7.8 + i * .13, x: rr(-16, 16), z: rr(-10, 10), done: false });
+  $('cine').classList.remove('hide'); $('c').classList.add('cctv'); $('fade').style.transition = 'none'; $('fade').style.opacity = 1; setTimeout(() => { $('fade').style.transition = 'opacity .5s'; $('fade').style.opacity = 0; }, 60);
+}
+function endCine() {
+  if (state !== 'cine') return; state = 'win'; $('cine').classList.add('hide'); $('c').classList.remove('cctv'); $('cineL').style.opacity = 0; $('cineN').style.opacity = 0; flashA = 0; endScreen('win');
+}
+function updateCine(dt) {
+  CINE.t += dt; const t = CINE.t;
+  let si = CINE_SHOTS.findIndex(s => t >= s.t0 && t < s.t1); if (si < 0) si = CINE_SHOTS.length - 1; const S = CINE_SHOTS[si];
+  if (si !== CINE.shot) { CINE.shot = si; $('cineCam').textContent = S.cam; $('cineN').style.opacity = .55; setTimeout(() => { if (state === 'cine') $('cineN').style.opacity = 0; }, 140); }
+  const k = clamp((t - S.t0) / (S.t1 - S.t0), 0, 1), sh = player.shake * player.shake * .05 + (si === 2 ? .02 + k * .05 : 0);
+  camera.fov = 60; camera.updateProjectionMatrix(); camera.position.set(lerp(S.a[0], S.b[0], k) + rr(-sh, sh), lerp(S.a[1], S.b[1], k) + rr(-sh, sh), lerp(S.a[2], S.b[2], k));
+  camera.lookAt(S.look[0] + rr(-sh, sh) * 3, S.look[1] + rr(-sh, sh) * 3, S.look[2]); player.shake = Math.max(0, player.shake - dt * 1.5);
+  for (const b of CINE.booms) if (!b.done && t >= b.t) { b.done = true; explode(new THREE.Vector3(b.x, .35, b.z)); if (rand() < .5) SFX.boom(); player.shake = Math.min(1.6, player.shake + .7);
+    for (let i = 0; i < 26; i++) { const a = rand() * 6.283, e = rr(.1, 1.4), sp = rr(1, 5.5); glow.emit(b.x, rr(.4, 2.2), b.z, Math.cos(a) * Math.cos(e) * sp, Math.sin(e) * sp + 2.2, Math.sin(a) * Math.cos(e) * sp, rr(.6, 1.5), rr(1, 2.4), 3.2, rr(1, 1.7), rr(.2, .5), .6, -2, 1.5); } // boule de feu visible de loin
+    for (let i = 0; i < 14; i++) smoke.emit(b.x + rr(-1, 1), rr(1, 3), b.z + rr(-1, 1), rr(-1, 1), rr(2, 5), rr(-1, 1), rr(3, 5), rr(1.6, 3), .09, .08, .07, .7, -.6, 2.2); for (const l of lamps) if (rand() < .25) l.t = 0; }
+  for (const l of lamps) { l.v = rand() < .1 ? 0 : 1; }
+  const d = new Date(), pad = n => String(n).padStart(2, '0'); $('cineTs').textContent = '22-11-2026  ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  if (t > 8.6) flashA = Math.min(1.4, flashA + dt * 1.6);
+  if (t > 9.4 && !CINE.lost) { CINE.lost = true; SFX.boom(); $('cineN').style.opacity = 1; $('cineL').style.opacity = 1; flashA = 0; }
+  if (t > 10.6) { CINE.lost = false; endCine(); }
 }
 /* ---------- version mobile : joystick, visée au doigt / gyroscope, boutons ---------- */
 let _gs = 1.6; try { _gs = +localStorage.getItem('h7_gyro2') || 1.6; } catch (_) { }
@@ -1877,12 +1983,14 @@ addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; cam
 function lock() { if (IS_TOUCH) { noLock = true; return; } try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { noLock = true; }); } catch (e) { noLock = true; } }
 function begin(s) { initAudio(); clearRun(); state = 'play'; ['menu', 'over', 'pause'].forEach(i => $(i).classList.add('hide')); $('hud').classList.add('on'); gunPivot.visible = true; camera.rotation.z = 0; enter(s, true); lock(); }
 function startGame() { kills = 0; heads = 0; begin(1); }
-function pause() { if (state !== 'play') return; state = 'pause'; mL = mR = false; for (const k in keys) keys[k] = false; $('dmg').style.opacity = 0; $('pause').classList.remove('hide'); }
+function pause() { if (state !== 'play') return; closeKP(); state = 'pause'; mL = mR = false; for (const k in keys) keys[k] = false; $('dmg').style.opacity = 0; $('pause').classList.remove('hide'); }
 function resume() { if (state !== 'pause') return; state = 'play'; $('pause').classList.add('hide'); initAudio(); lock(); }
 function quitToMenu() { state = 'menu'; mL = mR = false; for (const k in keys) keys[k] = false; clearRun(); step = 0; setWorld(1); gunPivot.visible = false; camera.rotation.z = 0; camera.fov = 72; camera.updateProjectionMatrix(); ['pause', 'over'].forEach(i => $(i).classList.add('hide')); $('hud').classList.remove('on'); $('menu').classList.remove('hide'); $('dmg').style.opacity = 0; if (document.exitPointerLock) document.exitPointerLock(); }
-document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement !== canvas && state === 'play' && !noLock) pause(); });
+document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement !== canvas && state === 'play' && !noLock && !KP.open) pause(); });
 document.addEventListener('pointerlockerror', () => { noLock = true; });
 addEventListener('keydown', e => {
+  if (state === 'cine' && CINE.t > 1) { endCine(); return; }
+  if (KP.open && state === 'play') { const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code); if (m) { kpPress(m[1]); return; } if (e.code === 'Backspace') { kpPress('C'); return; } if (e.code === 'Enter' || e.code === 'NumpadEnter') { kpPress('OK'); return; } if (e.code === 'Escape') { kpPress('X'); return; } }
   if (state === 'pause' && e.code === 'KeyP' && !e.repeat) { resume(); return; }
   if (state === 'play') {
     if (e.code === 'KeyF' && !e.repeat) { torchOn = !torchOn; SFX.click(); } if (e.code === 'KeyG' && !e.repeat) throwFlare(); if (e.code === 'KeyC' && !e.repeat) throwGrenade();
@@ -1914,6 +2022,7 @@ function tick(dt, raw) {
   time += dt;
   if (state === 'play') { const run = updatePlayer(dt); updateWeapon(dt, run); updateZombies(dt); updateMission(dt); if (raw > .04) slowT += dt; else slowT = Math.max(0, slowT - dt * .5); if (slowT > 3 && quality > 0) { slowT = 0; setQuality(quality - 1); } }
   else if (state === 'dead') { camera.position.y = lerp(camera.position.y, heightAt(player.pos.x, player.pos.z) + .32, 1 - Math.exp(-2.5 * dt)); camera.rotation.z = lerp(camera.rotation.z, .85, 1 - Math.exp(-2.5 * dt)); camera.rotation.x = lerp(camera.rotation.x, .15, 1 - Math.exp(-2 * dt)); gunPivot.visible = false; updateZombies(dt); }
+  else if (state === 'cine') { updateCine(dt); updateZombies(dt); }
   else if (state === 'win') { gunPivot.visible = false; }
   else if (state === 'menu') { const t = time * .12; camera.position.set(Math.sin(t) * 7.5, 2.0 + Math.sin(t * 1.7) * .35, 7.5 + Math.cos(t) * 3); camera.lookAt(Math.sin(t * .6) * 5, 2.4, -6); }
   updateAmbient(dt);
@@ -1944,11 +2053,11 @@ async function init() {
     for (let i = 0; i < 14; i++) { c.fillStyle = `rgba(0,0,0,${rr(.05, .16)})`; c.beginPath(); c.arc(rr(40, 216), rr(40, 216), rr(1, 5), 0, 7); c.fill(); } });
   torch.castShadow = true; torch.shadow.mapSize.set(1024, 1024); torch.shadow.bias = -.0008; torch.shadow.camera.near = .25; torch.shadow.camera.far = 36;
   for (let i = 0; i < MAG; i++) $('pips').appendChild(document.createElement('b'));
-  gunPivot.visible = false; setQuality(IS_TOUCH ? 0 : 1); setWorld(1); setupTouch();
+  gunPivot.visible = false; setQuality(IS_TOUCH ? 0 : 1); setWorld(1); setupTouch(); setupKP(); { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), im = x.createImageData(256, 256); for (let i = 0; i < im.data.length; i += 4) { const v = Math.random() * 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; } x.putImageData(im, 0, 0); $('cineN').style.backgroundImage = 'url(' + c.toDataURL() + ')'; } addEventListener('pointerdown', () => { if (state === 'cine' && CINE.t > 1) endCine(); });
   const warm = []; for (let i = 0; i < 10; i++) { const z = makeZombie(i === 9); z.root.position.set(-12 + i * 2.6, 0, -3); scene.add(z.root); warm.push(z.root); }
   camera.position.set(0, 2, 9); camera.lookAt(0, 2, -6); composer.render(.016); for (const r of warm) scene.remove(r);
   state = 'menu'; $('load').style.display = 'none'; $('play').style.display = ''; $('fade').style.opacity = 0;
-  window.__g = { start() { noLock = true; startGame(); }, go(s) { noLock = true; begin(s); }, player, camera, zombies, W, keys, DOOR, fire, throwFlare, throwGrenade, spawn: (b, x, z) => { const q = spawnZombie(3, [x, z], b); return q; }, nade: () => grenN, MZ, sever, limbHit, gibs, ads: v => { mR = v; }, dbgGun(x, y, z, ry) { if (window.__dg) scene.remove(window.__dg); const c = gun.clone(true); c.scale.setScalar(1); c.position.set(x, y, z); c.rotation.set(0, ry || 0, 0); c.traverse(o => { o.frustumCulled = true; }); scene.add(c); window.__dg = c; gunPivot.visible = false; $('hud').style.display = 'none'; torchOn = false; const dl = new THREE.PointLight(0xffffff, 3, 6, 1.5); dl.position.set(x + 1, y + 1.2, z + 1.5); scene.add(dl); const dl2 = new THREE.PointLight(0xffffff, 3, 6, 1.5); dl2.position.set(x - 1, y + .2, z - 1); scene.add(dl2); }, info: () => ({ exit: exitK, barrels: BARRELS.filter(b => b.alive).length, state, step, cp, power, timer: Math.round(timer), doorP: +doorP.toFixed(2), hp: Math.round(player.hp), z: zombies.filter(z => z.state !== 'dead').length, kills, pos: [+player.pos.x.toFixed(1), +player.pos.z.toFixed(1)], winT }), setQ: setQuality, step(n) { for (let i = 0; i < n; i++) { tick(.033, .016); scene.updateMatrixWorld(); } } };
+  window.__g = { start() { noLock = true; startGame(); }, go(s) { noLock = true; begin(s); }, player, camera, zombies, W, keys, DOOR, fire, throwFlare, throwGrenade, spawn: (b, x, z) => { const q = spawnZombie(3, [x, z], b); return q; }, nade: () => grenN, kpPress, startCine, cineT: () => CINE.t, MZ, sever, limbHit, gibs, ads: v => { mR = v; }, dbgGun(x, y, z, ry) { if (window.__dg) scene.remove(window.__dg); const c = gun.clone(true); c.scale.setScalar(1); c.position.set(x, y, z); c.rotation.set(0, ry || 0, 0); c.traverse(o => { o.frustumCulled = true; }); scene.add(c); window.__dg = c; gunPivot.visible = false; $('hud').style.display = 'none'; torchOn = false; const dl = new THREE.PointLight(0xffffff, 3, 6, 1.5); dl.position.set(x + 1, y + 1.2, z + 1.5); scene.add(dl); const dl2 = new THREE.PointLight(0xffffff, 3, 6, 1.5); dl2.position.set(x - 1, y + .2, z - 1); scene.add(dl2); }, info: () => ({ exit: exitK, code: exitCode, exs: JSON.stringify(EXS), kp: KP.open, barrels: BARRELS.filter(b => b.alive).length, state, step, cp, power, timer: Math.round(timer), doorP: +doorP.toFixed(2), hp: Math.round(player.hp), z: zombies.filter(z => z.state !== 'dead').length, kills, pos: [+player.pos.x.toFixed(1), +player.pos.z.toFixed(1)], winT }), setQ: setQuality, step(n) { for (let i = 0; i < n; i++) { tick(.033, .016); scene.updateMatrixWorld(); } } };
   requestAnimationFrame(frame);
 }
 init().catch(e => { $('load').textContent = 'ERREUR : ' + e.message; console.error(e); });
